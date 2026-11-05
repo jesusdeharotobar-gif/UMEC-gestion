@@ -1,0 +1,13 @@
+{
+  "name": "UNA MANO EN CASA · Gestión",
+  "short_name": "UMEC Gestión",
+  "description": "Gestión de UNA MANO EN CASA",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#286b4d",
+  "icons": [
+    { "src": "umec-logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

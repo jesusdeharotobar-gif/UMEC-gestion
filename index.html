@@ -5838,6 +5838,54 @@ function showEmployeeRequests() {
       </div><p class="form-error" role="alert"></p></form>`).join("")}
   `);
 }
+const webBookingRpc = (name, params = {}) => store.request("/rest/v1/rpc/umec2_web_" + name, {
+  method: "POST", body: { p_company: user.company_id, ...params },
+});
+async function showWebBookings() {
+  const [requests, settings] = await Promise.all([webBookingRpc("pending"), webBookingRpc("manage")]);
+  const workers = db.workers.map(w => `<option value="${esc(w.id)}">${esc(w.name)}</option>`).join("");
+  const phoneKey = phone => String(phone || "").replace(/\D/g, "").replace(/^(0034|34)(?=\d{9}$)/, "");
+  dialog("Reservas web", `
+    <section class="card">
+      <h3>Solicitudes pendientes (${requests.length})</h3>
+      ${requests.length ? requests.map(r => {
+        const matches = db.clients.filter(c => (c.email && c.email.toLowerCase() === r.email.toLowerCase()) ||
+          (c.phone && phoneKey(c.phone) === phoneKey(r.phone)));
+        return `<form data-web-booking="review" data-request="${esc(r.request_id)}" data-account="${esc(r.account_id)}">
+          <p><strong>${esc(r.name)}</strong> · ${esc(dateLabel(r.day))} a las ${esc(r.start.slice(0, 5))} · ${esc(r.minutes)} min</p>
+          <p>Pack de ${esc(r.pack)} h · ${esc(r.method)} · ${esc(r.email)} · ${esc(r.phone)}</p>
+          <p>${esc(r.address)} · ${esc(r.zone)}${r.beneficiary ? " · " + esc(r.beneficiary) : ""}</p>
+          ${matches.length ? `<label>Ficha existente (verifica la identidad antes de vincular)
+            <select name="client"><option value="">Sin vincular ahora</option>${matches.map(c => `<option value="${esc(c.id)}">${esc(c.name)} · ${esc(c.phone)}</option>`).join("")}</select></label>` : ""}
+          <div class="form-actions">
+            <button class="secondary" name="decision" value="reject">Rechazar</button>
+            <button class="primary" name="decision" value="approve">Confirmar cita</button>
+          </div><p class="form-error" role="alert"></p></form>`;
+      }).join("") : "<p>No hay solicitudes pendientes.</p>"}
+    </section>
+    <section class="card">
+      <h3>Disponibilidad publicada</h3>
+      <form data-web-booking="settings">
+        <label><input type="checkbox" name="enabled" ${settings.enabled ? "checked" : ""}> Agenda web abierta</label>
+        <button class="secondary">Guardar estado</button><p class="form-error" role="alert"></p>
+      </form>
+      <form data-web-booking="add">
+        <div class="form-grid">
+          <label>Trabajador<select name="worker" required><option value="">Selecciona</option>${workers}</select></label>
+          <label>Día<input type="date" name="day" min="${today()}" required></label>
+          <label>Desde<input type="time" name="start" required></label>
+          <label>Hasta<input type="time" name="end" required></label>
+        </div>
+        <button class="secondary" ${workers ? "" : "disabled"}>Publicar franja</button><p class="form-error" role="alert"></p>
+      </form>
+      ${settings.windows.map(w => `<form data-web-booking="remove">
+        <p>${esc(db.workers.find(worker => worker.id === w.worker_id)?.name || "Trabajador")} ·
+        ${esc(dateLabel(w.day))} · ${esc(w.starts.slice(0,5))}–${esc(w.ends.slice(0,5))}</p>
+        <input type="hidden" name="worker" value="${esc(w.worker_id)}"><input type="hidden" name="day" value="${esc(w.day)}">
+        <input type="hidden" name="start" value="${esc(w.starts)}"><input type="hidden" name="end" value="${esc(w.ends)}">
+        <button class="secondary">Retirar franja</button><p class="form-error" role="alert"></p></form>`).join("")}
+    </section>`);
+}
 async function refresh() {
   db = await store.load();
   if (store.mode === "cloud") user = store.user;
@@ -5982,7 +6030,7 @@ function render() {
   ];
   const currentTab = ["Empleados", "Cobros"].includes(page) ? page : area;
   $("#app").innerHTML =
-    `<div class="shell ${teamArea ? "team-area" : ""} ${menuCollapsed ? "menu-collapsed" : ""}">${teamArea ? "" : `<aside class="sidebar" id="main-menu"><a class="brand" href="#" data-action="home"><img src="${currentAppLogo()}" alt="UMEC Gestión"><span>UNA MANO EN CASA</span></a><p class="nav-caption">${area === "Coordinación" ? "ORGANIZAR EL EQUIPO" : "MI ESPACIO"}</p><nav aria-label="Menú principal">${nav.filter((n) => user.role !== "admin" || menuModuleEnabled(n)).map((n) => `<button data-page="${n}" class="nav-item ${n === page ? "current" : ""}" aria-label="${n}" title="${n}"><span aria-hidden="true">${icons[n]}</span><span class="nav-label">${n}</span></button>`).join("")}</nav><button type="button" class="menu-toggle secondary" data-action="toggle-menu" aria-label="${menuCollapsed ? "Expandir menú" : "Recoger menú"}" title="${menuCollapsed ? "Expandir menú" : "Recoger menú"}" aria-expanded="${!menuCollapsed}" aria-controls="main-menu"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 6 8 12l6 6"/></svg></button></aside>`}<div class="workspace"><header class="topbar"><div class="topbar-navigation"><img class="team-logo ${teamArea ? "" : "mobile-header-logo"}" src="${currentAppLogo()}" alt="UMEC Gestión"><div class="area-tabs" role="group" aria-label="Área de trabajo">${topTabs.map((a) => `<button data-area="${a}" class="${currentTab === a ? "active" : ""}" aria-current="${currentTab === a ? "page" : "false"}">${a}</button>`).join("")}</div></div>${accountMenu()}</header><div class="mode-banner ${store.mode === "cloud" ? "cloud" : ""}"><span>${store.mode === "demo" ? "◉ DEMOSTRACIÓN · Datos ficticios guardados en este navegador" : "● CONECTADO · Cuenta única de UMEC"} </span>${store.mode === "demo" ? '<button data-action="logout">Salir de la demo</button>' : user.role === "admin" ? btn(requestsFailed ? "Solicitudes de acceso · reintentar" : `Solicitudes de acceso (${pendingRequests.length})`, "employee-requests", 'type="button"', "secondary") : ""}</div><main id="content" class="${page === "Planificación" ? "planning-page" : ""}"><div class="page-heading ${page === "Inicio" ? "home-heading" : ""}"><div><span class="eyebrow">${area === "Coordinación" ? "COORDINACIÓN DEL EQUIPO" : "UMEC GESTIÓN"}</span><h1 class="${page === "Inicio" ? "sr-only" : ""}">${page === "Inicio" ? "Resumen general" : page}</h1><p>${subtitle()}</p></div>${user.role === "admin" && page === "Planificación" ? `<div class="planning-header-actions">${btn("+ Crear servicio", "create-service")}${menuModuleEnabled("Clientes") ? `<div class="planning-client-actions">${btn(icons.Clientes + "<span>Clientes</span>", "coord-clients", "", "secondary")}${btn("+ Añadir cliente", "new-client", "", "secondary")}</div>` : ""}</div>` : user.role === "admin" && page === "Clientes" && area === "Coordinación" ? btn("Volver a Planificación", "coord", "", "secondary") : user.role === "admin" && page === "Cobros" ? btn('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6M6 17H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M6 14h12v7H6zM17 12h2"/></svg><span>Ver informe</span>', "view-payment-report", "", "secondary payment-report-button") : user.role === "admin" && ["Inicio", "Servicios"].includes(page) ? btn("+ Crear servicio", "create-service") : ""}</div>${body()}</main><footer>Una mano en casa <span>·</span> Gestión cercana, cada día.</footer></div></div>`;
+    `<div class="shell ${teamArea ? "team-area" : ""} ${menuCollapsed ? "menu-collapsed" : ""}">${teamArea ? "" : `<aside class="sidebar" id="main-menu"><a class="brand" href="#" data-action="home"><img src="${currentAppLogo()}" alt="UMEC Gestión"><span>UNA MANO EN CASA</span></a><p class="nav-caption">${area === "Coordinación" ? "ORGANIZAR EL EQUIPO" : "MI ESPACIO"}</p><nav aria-label="Menú principal">${nav.filter((n) => user.role !== "admin" || menuModuleEnabled(n)).map((n) => `<button data-page="${n}" class="nav-item ${n === page ? "current" : ""}" aria-label="${n}" title="${n}"><span aria-hidden="true">${icons[n]}</span><span class="nav-label">${n}</span></button>`).join("")}</nav><button type="button" class="menu-toggle secondary" data-action="toggle-menu" aria-label="${menuCollapsed ? "Expandir menú" : "Recoger menú"}" title="${menuCollapsed ? "Expandir menú" : "Recoger menú"}" aria-expanded="${!menuCollapsed}" aria-controls="main-menu"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 6 8 12l6 6"/></svg></button></aside>`}<div class="workspace"><header class="topbar"><div class="topbar-navigation"><img class="team-logo ${teamArea ? "" : "mobile-header-logo"}" src="${currentAppLogo()}" alt="UMEC Gestión"><div class="area-tabs" role="group" aria-label="Área de trabajo">${topTabs.map((a) => `<button data-area="${a}" class="${currentTab === a ? "active" : ""}" aria-current="${currentTab === a ? "page" : "false"}">${a}</button>`).join("")}</div></div>${accountMenu()}</header><div class="mode-banner ${store.mode === "cloud" ? "cloud" : ""}"><span>${store.mode === "demo" ? "◉ DEMOSTRACIÓN · Datos ficticios guardados en este navegador" : "● CONECTADO · Cuenta única de UMEC"} </span>${store.mode === "demo" ? '<button data-action="logout">Salir de la demo</button>' : user.role === "admin" ? btn("Reservas web", "web-bookings", 'type="button"', "secondary") + btn(requestsFailed ? "Solicitudes de acceso · reintentar" : `Solicitudes de acceso (${pendingRequests.length})`, "employee-requests", 'type="button"', "secondary") : ""}</div><main id="content" class="${page === "Planificación" ? "planning-page" : ""}"><div class="page-heading ${page === "Inicio" ? "home-heading" : ""}"><div><span class="eyebrow">${area === "Coordinación" ? "COORDINACIÓN DEL EQUIPO" : "UMEC GESTIÓN"}</span><h1 class="${page === "Inicio" ? "sr-only" : ""}">${page === "Inicio" ? "Resumen general" : page}</h1><p>${subtitle()}</p></div>${user.role === "admin" && page === "Planificación" ? `<div class="planning-header-actions">${btn("+ Crear servicio", "create-service")}${menuModuleEnabled("Clientes") ? `<div class="planning-client-actions">${btn(icons.Clientes + "<span>Clientes</span>", "coord-clients", "", "secondary")}${btn("+ Añadir cliente", "new-client", "", "secondary")}</div>` : ""}</div>` : user.role === "admin" && page === "Clientes" && area === "Coordinación" ? btn("Volver a Planificación", "coord", "", "secondary") : user.role === "admin" && page === "Cobros" ? btn('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6M6 17H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M6 14h12v7H6zM17 12h2"/></svg><span>Ver informe</span>', "view-payment-report", "", "secondary payment-report-button") : user.role === "admin" && ["Inicio", "Servicios"].includes(page) ? btn("+ Crear servicio", "create-service") : ""}</div>${body()}</main><footer>Una mano en casa <span>·</span> Gestión cercana, cada día.</footer></div></div>`;
   openNotificationDestination();
   updateAssignment(false);
 }
@@ -7249,6 +7297,9 @@ document.addEventListener("click", (e) => {
           showEmployeeRequests();
         }
         break;
+      case "web-bookings":
+        if (store?.mode === "cloud" && user?.role === "admin") await showWebBookings();
+        break;
       case "google-sign-in":
         try {
           $("#login-feedback").textContent = "";
@@ -7626,6 +7677,26 @@ function submitForm(f, submitter) {
         await refresh();
         document.querySelector("#coverage-settings").open = true;
         toast("Ciudades de cobertura guardadas.");
+        return;
+      }
+      if (f.dataset.webBooking) {
+        if (store?.mode !== "cloud" || user?.role !== "admin") return;
+        const action = f.dataset.webBooking;
+        if (action === "review") {
+          if (!["approve", "reject"].includes(submitter?.value)) return;
+          const approve = submitter.value === "approve";
+          if (!window.confirm(approve ? "¿Confirmar la cita y asignarla a una persona disponible?" : "¿Rechazar esta solicitud?")) return;
+          await webBookingRpc("review", { p_request: f.dataset.request, p_account: f.dataset.account,
+            p_approve: approve, p_client: approve ? values.client || null : null });
+          toast(approve ? "Cita confirmada en la agenda." : "Solicitud rechazada.");
+          await refresh();
+        } else if (action === "settings") {
+          await webBookingRpc("manage", { p_enabled: values.enabled === "on" });
+        } else {
+          await webBookingRpc("manage", { p_worker: values.worker, p_day: values.day,
+            p_start: values.start, p_end: values.end, p_remove: action === "remove" });
+        }
+        await showWebBookings();
         return;
       }
       if (f.hasAttribute("data-employee-request")) {

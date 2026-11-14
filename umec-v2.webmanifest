@@ -1,0 +1,17 @@
+{
+  "id": "./UMEC_V2_v5.0.2.html",
+  "name": "UMEC Gestión",
+  "short_name": "UMEC",
+  "start_url": "./UMEC_V2_v5.0.2.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#d9eee3",
+  "theme_color": "#0b4e60",
+  "icons": [
+    {
+      "src": "umec-v2-icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

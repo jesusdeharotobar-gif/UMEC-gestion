@@ -7,7 +7,7 @@
     <link rel="manifest" href="umec-v2.webmanifest?v=503">
     <link rel="icon" type="image/png" sizes="32x32" href="umec-v2-icon-32.png">
     <link rel="apple-touch-icon" sizes="192x192" href="umec-v2-icon-192.png">
-    <title>UMEC Gestión · UMEC V2 v5.0.5</title>
+    <title>UMEC Gestión · UMEC V2 v5.0.6</title>
     <style>:root {
   --accent: #155b69;
   --ink: #203c44;
@@ -5348,8 +5348,6 @@ class CloudStore {
     );
   }
   async service(s) {
-    if (overnight(s))
-      throw Error("Los servicios que cruzan medianoche están disponibles en la demo. El guardado con datos reales requiere adaptar la base de datos.");
     return this.put("services", s);
   }
   async put(table, item) {
@@ -8035,10 +8033,6 @@ function updateEndTime(f) {
     f.elements.end.setCustomValidity(result.error);
   }
   const slot = Object.fromEntries(new FormData(f));
-  if (validServiceSlot(slot) && overnight(slot) && store.mode === "cloud") {
-    f.dataset.endError = "Para guardar un servicio que cruza medianoche con datos reales hay que adaptar la base de datos. Puedes probarlo en la demo.";
-    f.elements.end.setCustomValidity(f.dataset.endError);
-  }
   $("#end-time-info").textContent =
     f.dataset.endError ||
     (validServiceSlot(slot) && overnight(slot) ? "El servicio termina al día siguiente. " : "") +

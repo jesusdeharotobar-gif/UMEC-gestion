@@ -7,7 +7,7 @@
     <link rel="manifest" href="umec-v2.webmanifest?v=503">
     <link rel="icon" type="image/png" sizes="32x32" href="umec-v2-icon-32.png">
     <link rel="apple-touch-icon" sizes="192x192" href="umec-v2-icon-192.png">
-    <title>UMEC Gestión · UMEC V2 v5.0.4</title>
+    <title>UMEC Gestión · UMEC V2 v5.0.5</title>
     <style>:root {
   --accent: #155b69;
   --ink: #203c44;
@@ -5024,6 +5024,12 @@ function workerAvailability(db, workerId, s) {
     db.availability.some((a) => a.worker_id === workerId && serviceOnDate(s, a.date))
   )
     return unavailable("blocked", "Esta persona no está disponible ese día.");
+  const dates = overnight(s) && s.end !== "00:00" ? [s.date, shiftDate(s.date, 1)] : [s.date];
+  if ((db.hour_blocks || []).some(b => b.worker_id === workerId && dates.includes(b.day) &&
+      (() => { const slot = serviceSegment(s, b.day);
+        return slot && minutesOf(b.starts) < slot.end && minutesOf(b.ends) > slot.start;
+      })()))
+    return unavailable("blocked-hours", "Esta persona ha bloqueado parte de ese horario.");
   if (
     db.services.some(
       (x) => {
@@ -5312,6 +5318,7 @@ class CloudStore {
       "workers",
       "services",
       "availability",
+      "hour_blocks",
       "tariffs",
       "settings",
     ];
@@ -5844,7 +5851,6 @@ const webBookingRpc = (name, params = {}) => store.request("/rest/v1/rpc/umec2_w
 async function showWebBookings() {
   const [pending, settings] = await Promise.all([webBookingRpc("pending"), webBookingRpc("manage")]);
   const requests = [...pending].sort((a, b) => (a.day + a.start).localeCompare(b.day + b.start));
-  const workers = db.workers.map(w => `<option value="${esc(w.id)}">${esc(w.name)}</option>`).join("");
   const phoneKey = phone => String(phone || "").replace(/\D/g, "").replace(/^(0034|34)(?=\d{9}$)/, "");
   dialog("Reservas web", `
     <section class="card">
@@ -5867,26 +5873,12 @@ async function showWebBookings() {
       }).join("") : "<p>No hay solicitudes pendientes.</p>"}
     </section>
     <section class="card">
-      <h3>Disponibilidad publicada</h3>
+      <h3>Disponibilidad de la Agenda</h3>
       <form data-web-booking="settings">
         <label><input type="checkbox" name="enabled" ${settings.enabled ? "checked" : ""}> Agenda web abierta</label>
         <button class="secondary">Guardar estado</button><p class="form-error" role="alert"></p>
       </form>
-      <form data-web-booking="add">
-        <div class="form-grid">
-          <label>Trabajador<select name="worker" required><option value="">Selecciona</option>${workers}</select></label>
-          <label>Día<input type="date" name="day" min="${today()}" required></label>
-          <label>Desde<input type="time" name="start" required></label>
-          <label>Hasta<input type="time" name="end" required></label>
-        </div>
-        <button class="secondary" ${workers ? "" : "disabled"}>Publicar franja</button><p class="form-error" role="alert"></p>
-      </form>
-      ${settings.windows.map(w => `<form data-web-booking="remove">
-        <p>${esc(db.workers.find(worker => worker.id === w.worker_id)?.name || "Trabajador")} ·
-        ${esc(dateLabel(w.day))} · ${esc(w.starts.slice(0,5))}–${esc(w.ends.slice(0,5))}</p>
-        <input type="hidden" name="worker" value="${esc(w.worker_id)}"><input type="hidden" name="day" value="${esc(w.day)}">
-        <input type="hidden" name="start" value="${esc(w.starts)}"><input type="hidden" name="end" value="${esc(w.ends)}">
-        <button class="secondary">Retirar franja</button><p class="form-error" role="alert"></p></form>`).join("")}
+      <p>El portal calcula los huecos a partir de los bloqueos y servicios de la Agenda.</p>
     </section>`);
 }
 async function refresh() {
@@ -6626,7 +6618,7 @@ function calendar(coord) {
           .map(([short, full]) => `<span aria-label="${full}">${short}</span>`)
           .join("")}</div>`
       : ""
-  }${mode === "week" ? `<div class="planning-week-controls"><button type="button" class="secondary" data-action="planning-week-layout">${verticalWeek ? "Ver horas en horizontal" : "Ver horas en vertical"}</button><p class="hint">Desliza arriba o abajo sobre las fechas o usa la rueda para pasar los días.</p></div>` : ""}${mode === "month" ? `<div class="calendar-grid">${cells}</div>` : verticalWeek ? `<div class="hourly-calendar" tabindex="0" role="region" aria-label="Semana de 24 horas"><div class="planning-week-grid">${cells}</div></div>` : mode === "day" ? `<div class="planning-date-strip" role="group" aria-label="Elegir día de planificación">${cells}</div>${planningDayHours(list, anchor)}` : hourlyCalendar(cells)}<div class="calendar-legend"><span class="legend-unassigned">⚠ Sin asignar: necesita una persona</span><span>✓ Asignados: con persona</span>${coord && !target ? '<span><i class="dot partial-dot"></i> Parcial: parte del equipo bloqueada</span><span><i class="dot coral"></i> No disp.: todo el equipo bloqueado</span>' : '<span><i class="dot coral"></i> No disp. = no disponible</span>'}<span><i class="dot focus-dot"></i> Día consultado</span><span><i class="dot pale"></i> Marcado para actuar</span></div>${coord && !target && dailyTeamState(db, anchor).state === "empty" ? '<p class="hint">No hay personas activas en el equipo. No se indica disponibilidad.</p>' : ""}${canMark ? `<div class="availability-bar"><p aria-live="polite"><b>${marks.size} días marcados para actuar</b><small>Un clic consulta el día. Doble clic lo marca o desmarca; después aplica la disponibilidad.</small></p>${btn(marks.has(anchor) ? "Desmarcar día consultado" : "Marcar día consultado", "toggle-focused-day", `aria-pressed="${marks.has(anchor)}"`, "secondary")}${btn("Limpiar marcas", "clear-marked-days", "", "text")}${btn("No disponible", "block-days", "", "secondary")}${btn("Disponible", "free-days", "", "text")}</div>` : '<p class="hint calendar-hint" title="Los colores representan bloqueos diarios del equipo activo; los horarios concretos se comprueban al asignar un servicio.">Selecciona una persona para cambiar bloqueos diarios. La franja se valida al asignar.</p>'}</section><section class="card daily"><span class="eyebrow">${dateLabel(anchor)}</span><h2>${coord && mode === "day" ? "Disponibilidad del día" : "Servicios del día"}</h2>${coord && mode === "day" ? "" : daily.length ? daily.map(serviceRow).join("") : empty("Día sin servicios.")}${coord ? btn("+ Crear este día", "create-service", "", "secondary full") : ""}${
+  }${mode === "week" ? `<div class="planning-week-controls"><button type="button" class="secondary" data-action="planning-week-layout">${verticalWeek ? "Ver horas en horizontal" : "Ver horas en vertical"}</button><p class="hint">Desliza arriba o abajo sobre las fechas o usa la rueda para pasar los días.</p></div>` : ""}${mode === "month" ? `<div class="calendar-grid">${cells}</div>` : verticalWeek ? `<div class="hourly-calendar" tabindex="0" role="region" aria-label="Semana de 24 horas"><div class="planning-week-grid">${cells}</div></div>` : mode === "day" ? `<div class="planning-date-strip" role="group" aria-label="Elegir día de planificación">${cells}</div>${planningDayHours(list, anchor)}` : hourlyCalendar(cells)}<div class="calendar-legend"><span class="legend-unassigned">⚠ Sin asignar: necesita una persona</span><span>✓ Asignados: con persona</span>${coord && !target ? '<span><i class="dot partial-dot"></i> Parcial: parte del equipo bloqueada</span><span><i class="dot coral"></i> No disp.: todo el equipo bloqueado</span>' : '<span><i class="dot coral"></i> No disp. = no disponible</span>'}<span><i class="dot focus-dot"></i> Día consultado</span><span><i class="dot pale"></i> Marcado para actuar</span></div>${coord && !target && dailyTeamState(db, anchor).state === "empty" ? '<p class="hint">No hay personas activas en el equipo. No se indica disponibilidad.</p>' : ""}${canMark ? `<div class="availability-bar"><p aria-live="polite"><b>${marks.size} días marcados para actuar</b><small>Un clic consulta el día. Doble clic lo marca o desmarca; después aplica la disponibilidad.</small></p>${btn(marks.has(anchor) ? "Desmarcar día consultado" : "Marcar día consultado", "toggle-focused-day", `aria-pressed="${marks.has(anchor)}"`, "secondary")}${btn("Limpiar marcas", "clear-marked-days", "", "text")}${btn("No disponible", "block-days", "", "secondary")}${btn("Disponible", "free-days", "", "text")}${store.mode === "cloud" ? btn("Horas no disponibles", "hour-blocks", 'type="button"', "secondary") : ""}</div>` : '<p class="hint calendar-hint" title="Los colores representan bloqueos diarios del equipo activo; los horarios concretos se comprueban al asignar un servicio.">Selecciona una persona para cambiar bloqueos diarios. La franja se valida al asignar.</p>'}</section><section class="card daily"><span class="eyebrow">${dateLabel(anchor)}</span><h2>${coord && mode === "day" ? "Disponibilidad del día" : "Servicios del día"}</h2>${coord && mode === "day" ? "" : daily.length ? daily.map(serviceRow).join("") : empty("Día sin servicios.")}${coord ? btn("+ Crear este día", "create-service", "", "secondary full") : ""}${
     coord
       ? `<h3 class="availability-title">Disponibilidad del equipo</h3>${db.workers
           .filter((w) => !target || w.id === target)
@@ -7008,6 +7000,27 @@ function go(p, slot = null) {
   if (p === "Planificación" || p === "Empleados") area = "Coordinación";
   page = p;
   render();
+}
+function showHourBlocks(worker, day) {
+  const blocks = (db.hour_blocks || []).filter(b => b.worker_id === worker && b.day === day)
+    .sort((a, b) => a.starts.localeCompare(b.starts));
+  dialog("Horas no disponibles", `
+    <p>${esc(dateLabel(day))}</p>
+    <form data-hour-block="add" data-worker="${esc(worker)}" data-day="${esc(day)}">
+      <div class="form-grid">
+        <label>Desde<input name="start" type="time" required></label>
+        <label>Hasta<input name="end" type="time" required></label>
+      </div>
+      <button class="primary" type="submit">Bloquear horas</button>
+      <p class="form-error" role="alert"></p>
+    </form>
+    ${blocks.length ? blocks.map(b => `<form data-hour-block="remove" data-worker="${esc(worker)}" data-day="${esc(day)}">
+      <input type="hidden" name="start" value="${esc(b.starts)}">
+      <input type="hidden" name="end" value="${esc(b.ends)}">
+      <p>${esc(b.starts.slice(0,5))}–${esc(b.ends.slice(0,5))}</p>
+      <button type="submit" class="secondary">Quitar bloqueo</button>
+      <p class="form-error" role="alert"></p>
+    </form>`).join("") : "<p>Sin bloqueos por horas.</p>"}`);
 }
 function calendarTarget() {
   const target = page === "Planificación" ? workerFilter : mine()?.id;
@@ -7582,6 +7595,12 @@ document.addEventListener("click", (e) => {
         updateCalendarSelection();
         document.querySelector('[data-action="clear-marked-days"]')?.focus();
         break;
+      case "hour-blocks": {
+        const worker = calendarTarget();
+        if (!worker) throw Error("Selecciona una persona.");
+        showHourBlocks(worker, calendarAnchor());
+        break;
+      }
       case "block-days":
       case "free-days": {
         const target = calendarTarget();
@@ -7680,6 +7699,18 @@ function submitForm(f, submitter) {
         await refresh();
         document.querySelector("#coverage-settings").open = true;
         toast("Ciudades de cobertura guardadas.");
+        return;
+      }
+      if (f.dataset.hourBlock) {
+        if (store.mode !== "cloud" || !["add", "remove"].includes(f.dataset.hourBlock)) return;
+        if (!values.start || !values.end || values.start >= values.end) throw Error("La hora de fin debe ser posterior a la de inicio.");
+        const { worker, day } = f.dataset;
+        await store.request("/rest/v1/rpc/umec2_change_hour_block", { method: "POST", body: {
+          p_worker: worker, p_day: day, p_start: values.start, p_end: values.end,
+          p_remove: f.dataset.hourBlock === "remove",
+        } });
+        await refresh();
+        showHourBlocks(worker, day);
         return;
       }
       if (f.dataset.webBooking) {

@@ -7,7 +7,7 @@
     <link rel="manifest" href="umec-v2.webmanifest?v=503">
     <link rel="icon" type="image/png" sizes="32x32" href="umec-v2-icon-32.png">
     <link rel="apple-touch-icon" sizes="192x192" href="umec-v2-icon-192.png">
-    <title>UMEC Gestión · UMEC V2 v5.0.3</title>
+    <title>UMEC Gestión · UMEC V2 v5.0.4</title>
     <style>:root {
   --accent: #155b69;
   --ink: #203c44;
@@ -5842,19 +5842,22 @@ const webBookingRpc = (name, params = {}) => store.request("/rest/v1/rpc/umec2_w
   method: "POST", body: { p_company: user.company_id, ...params },
 });
 async function showWebBookings() {
-  const [requests, settings] = await Promise.all([webBookingRpc("pending"), webBookingRpc("manage")]);
+  const [pending, settings] = await Promise.all([webBookingRpc("pending"), webBookingRpc("manage")]);
+  const requests = [...pending].sort((a, b) => (a.day + a.start).localeCompare(b.day + b.start));
   const workers = db.workers.map(w => `<option value="${esc(w.id)}">${esc(w.name)}</option>`).join("");
   const phoneKey = phone => String(phone || "").replace(/\D/g, "").replace(/^(0034|34)(?=\d{9}$)/, "");
   dialog("Reservas web", `
     <section class="card">
       <h3>Solicitudes pendientes (${requests.length})</h3>
+      <p>Ordenadas por fecha y hora de visita.</p>
       ${requests.length ? requests.map(r => {
         const matches = db.clients.filter(c => (c.email && c.email.toLowerCase() === r.email.toLowerCase()) ||
           (c.phone && phoneKey(c.phone) === phoneKey(r.phone)));
         return `<form data-web-booking="review" data-request="${esc(r.request_id)}" data-account="${esc(r.account_id)}">
           <p><strong>${esc(r.name)}</strong> · ${esc(dateLabel(r.day))} a las ${esc(r.start.slice(0, 5))} · ${esc(r.minutes)} min</p>
           <p>Pack de ${esc(r.pack)} h · ${esc(r.method)} · ${esc(r.email)} · ${esc(r.phone)}</p>
-          <p>${esc(r.address)} · ${esc(r.zone)}${r.beneficiary ? " · " + esc(r.beneficiary) : ""}</p>
+          <p>${esc(r.address)} · ${esc(r.zone)}</p>
+          ${r.beneficiary ? `<p>Persona a acompañar: ${esc(r.beneficiary)}</p>` : ""}
           ${matches.length ? `<label>Ficha existente (verifica la identidad antes de vincular)
             <select name="client"><option value="">Sin vincular ahora</option>${matches.map(c => `<option value="${esc(c.id)}">${esc(c.name)} · ${esc(c.phone)}</option>`).join("")}</select></label>` : ""}
           <div class="form-actions">

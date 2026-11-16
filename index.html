@@ -7,7 +7,7 @@
     <link rel="manifest" href="umec-v2.webmanifest?v=503">
     <link rel="icon" type="image/png" sizes="32x32" href="umec-v2-icon-32.png">
     <link rel="apple-touch-icon" sizes="192x192" href="umec-v2-icon-192.png">
-    <title>UMEC Gestión · UMEC V2 v5.0.13</title>
+    <title>UMEC Gestión · UMEC V2 v5.0.16</title>
     <style>:root {
   --accent: #155b69;
   --ink: #203c44;
@@ -4700,6 +4700,57 @@ dialog form label :is(input, select, textarea) { font-weight: 400; }
 .cal-day.day-available.selected { border-color: var(--mark-line); }
 .calendar-legend .dot.available-dot { background: #bfe9ca; border: 1px solid #549768; }
 </style>
+<style>
+.cal-day.needs-assignment:not(.blocked):not(.partial-availability),
+.cal-day.needs-assignment:not(.blocked):not(.partial-availability):hover,
+.cal-day .unassigned-count,
+.calendar-legend .legend-unassigned {
+  background: var(--cal-pending-badge);
+  color: var(--cal-pending-ink);
+  border-color: var(--cal-pending-line);
+}
+.cal-day.partial-availability.needs-assignment,
+.cal-day.partial-availability.needs-assignment:hover {
+  background: var(--cal-partial);
+  color: var(--cal-partial-ink);
+  border-color: var(--cal-partial-line);
+}
+.cal-day.needs-assignment.selected,
+.cal-day.partial-availability.selected { border-color: var(--mark-line); }
+.calendar-legend .dot.assigned-dot { background: var(--cal-assigned); border: 1px solid var(--cal-assigned-line); }
+button.cal-day[data-date].day-available:not(.blocked),
+button.cal-day[data-date].day-available:not(.blocked):hover {
+  background: #bfe9ca;
+  border-color: #549768;
+  color: #143e26;
+  box-shadow: none;
+}
+button.cal-day[data-date].day-available.selected:not(.blocked) { border-color: var(--mark-line); }
+button.cal-day[data-date].has-services:not(.day-available):not(.blocked) {
+  background: var(--cal-free);
+  color: var(--cal-free-ink);
+  border-color: var(--cal-free-line);
+  box-shadow: none;
+}
+button.cal-day[data-date].has-services:not(.day-available):not(.blocked).selected { border-color: var(--mark-line); }
+button.cal-day[data-date].has-services .calendar-count.assigned-count {
+  background: var(--cal-assigned);
+  border: 1px solid var(--cal-assigned-line);
+  color: var(--cal-assigned-ink);
+}
+.cal-day .unavailable-label .count-short > span { white-space: normal; }
+@media (max-width: 450px) {
+  .planning-month-mode .cal-day.blocked .unavailable-label .count-short > span { font-size: 8px; overflow-wrap: anywhere; }
+}
+</style>
+<style>
+.services-month-day.day-available { background:#bfe9ca; border-color:#549768; color:#143e26; }
+.services-month-day.blocked { background:var(--cal-blocked); border-color:var(--cal-blocked-line); color:var(--cal-blocked-ink); }
+.services-month-assigned, .services-month-availability { border:1px solid; border-radius:4px; padding:1px 3px; }
+.services-month-assigned { background:var(--cal-assigned); border-color:var(--cal-assigned-line); color:var(--cal-assigned-ink); }
+.services-month-availability.partial-label { background:var(--cal-partial-badge); border-color:var(--cal-partial-line); color:var(--cal-partial-ink); }
+.services-month-availability.blocked-label { background:var(--cal-blocked-badge); border-color:var(--cal-blocked-line); color:var(--cal-blocked-ink); }
+</style>
 </head>
   <body>
     <div id="app"></div>
@@ -5650,10 +5701,10 @@ function themeTokens(settings) {
     "cal-assigned": dark ? "#2B4054" : "#DCEAF2",
     "cal-assigned-ink": dark ? "#D2E7F8" : "#25495E",
     "cal-assigned-line": dark ? "#607991" : "#A8BECD",
-    "cal-partial": dark ? "#3B324D" : "#EEE9F6",
-    "cal-partial-badge": dark ? "#4B3D61" : "#E7DEF3",
-    "cal-partial-ink": dark ? "#E7D9FA" : "#54416F",
-    "cal-partial-line": dark ? "#8B75A4" : "#BFAED4",
+    "cal-partial": dark ? "#4A351A" : "#FFE7B8",
+    "cal-partial-badge": dark ? "#244B35" : "#E1F4E5",
+    "cal-partial-ink": dark ? "#C0E9CC" : "#174C2A",
+    "cal-partial-line": dark ? "#78A987" : "#689B75",
     "cal-blocked": dark ? "#4B2E30" : "#FBE5E3",
     "cal-blocked-badge": dark ? "#603A3A" : "#FFE0D9",
     "cal-blocked-ink": dark ? "#FFD2CB" : "#813B2D",
@@ -6590,17 +6641,24 @@ function serviceMonthCalendar(visible, start, last) {
     const date = start.slice(0, 8) + String(n).padStart(2, "0"),
       entries = visible.filter((s) => serviceOnDate(s, date)),
       counts = calendarServiceCounts(entries);
-    const cancelled = entries.filter((s) => s.status === "cancelado").length,
-      finished = entries.filter((s) => s.status === "completado").length;
+    const target = user.role === "admin" ? null : mine()?.id;
+    const day = user.role === "admin" || target ? dailyTeamState(db, date, target) : { state: "empty" };
+    const available = day.state === "none" || day.state === "partial";
+    const blocked = day.state === "total";
+    const partial = day.state === "partial";
+    const free = day.total - day.blocked;
+    const availabilityLabel = blocked ? "No disponible" : partial ? free + (free === 1 ? " libre" : " libres") : "";
+    const finished = entries.filter((s) => s.status === "completado").length;
     const descriptions = [
       entries.length + " servicios",
       counts.unassigned ? counts.unassigned + " sin asignar" : "",
-      cancelled ? cancelled + " cancelados" : "",
+      counts.assigned ? counts.assigned + " asignados" : "",
+      availabilityLabel,
       finished ? finished + " finalizados" : "",
     ]
       .filter(Boolean)
       .join(", ");
-    cells += `<button type="button" class="services-month-day ${entries.length ? "has-entries" : ""} ${entries.length && entries.every((s) => !active(s)) ? "is-inactive" : ""} ${counts.unassigned ? "has-unassigned" : ""} ${date === servicesDate ? "is-anchor" : ""}" data-action="services-open-day" data-calendar-date="${date}" aria-label="${dateLabel(date)}, ${descriptions}. Abrir día" aria-pressed="${date === servicesDate}"><b>${n}</b>${entries.length ? `<small class="services-month-count">${entries.length}<span class="services-month-long"> servicio${entries.length === 1 ? "" : "s"}</span><span class="services-month-short" aria-hidden="true"> serv.</span></small>` : ""}${counts.unassigned ? `<small class="services-month-pending">⚠ ${counts.unassigned}<span class="services-month-long"> sin asignar</span><span class="services-month-short" aria-hidden="true"> sin asig.</span></small>` : ""}${cancelled ? `<small class="services-month-neutral">${cancelled}<span class="services-month-long"> cancelado${cancelled === 1 ? "" : "s"}</span><span class="services-month-short" aria-hidden="true"> canc.</span></small>` : ""}${finished ? `<small class="services-month-neutral">${finished}<span class="services-month-long"> finalizado${finished === 1 ? "" : "s"}</span><span class="services-month-short" aria-hidden="true"> fin.</span></small>` : ""}</button>`;
+    cells += `<button type="button" class="services-month-day ${available ? "day-available" : ""} ${blocked ? "blocked" : ""} ${date === servicesDate ? "is-anchor" : ""}" data-action="services-open-day" data-calendar-date="${date}" aria-label="${dateLabel(date)}, ${descriptions}. Abrir día" aria-pressed="${date === servicesDate}"><b>${n}</b>${counts.assigned ? `<small class="services-month-assigned">✓ ${counts.assigned}<span class="services-month-long"> asignado${counts.assigned === 1 ? "" : "s"}</span></small>` : ""}${counts.unassigned ? `<small class="services-month-pending">⚠ ${counts.unassigned}<span class="services-month-long"> sin asignar</span><span class="services-month-short" aria-hidden="true"> sin asig.</span></small>` : ""}${availabilityLabel ? `<small class="services-month-availability ${partial ? "partial-label" : "blocked-label"}">${availabilityLabel}</small>` : ""}${finished ? `<small class="services-month-neutral">${finished}<span class="services-month-long"> finalizado${finished === 1 ? "" : "s"}</span><span class="services-month-short" aria-hidden="true"> fin.</span></small>` : ""}</button>`;
   }
   for (let i = (offset + days) % 7; i > 0 && i < 7; i++)
     cells += '<span class="services-month-blank" aria-hidden="true"></span>';
@@ -6734,21 +6792,16 @@ function calendar(coord) {
         : dailyTeamState(db, date, target);
     const partial = coord && !target && dayState.state === "partial";
     const blocked = dayState.state === "total";
-    const available = dayState.state === "none" && !items.length;
+    const available = dayState.state === "none" || partial;
     const hasBlocking = partial || blocked;
-    const blockedText =
-      coord && !target
-        ? partial
-          ? "Disponibilidad parcial · " +
-            dayState.blocked +
-            " de " +
-            dayState.total +
-            (dayState.blocked === 1 ? " no disponible" : " no disponibles")
-          : "Todo el equipo no disponible · " +
-            dayState.blocked +
-            " de " +
-            dayState.total
-        : "No disponible";
+    const availablePeople = dayState.total - dayState.blocked;
+    const blockedText = partial
+      ? "Disponibilidad parcial: " + availablePeople +
+        (availablePeople === 1 ? " persona disponible" : " personas disponibles") + " de " + dayState.total
+      : coord && !target ? "Nadie disponible en el equipo" : "No disponible";
+    const shortAvailability = partial
+      ? availablePeople + (availablePeople === 1 ? " libre" : " libres")
+      : "No disponible";
     const serviceLabels = [
       counts.unassigned ? counts.unassigned + " sin asignar" : "",
       counts.assigned
@@ -6761,7 +6814,7 @@ function calendar(coord) {
     ]
       .filter(Boolean)
       .join(", ");
-    const dayCell = `<button class="cal-day ${date === today() ? "today" : ""} ${date === anchor ? "focused" : ""} ${marks.has(date) ? "selected" : ""} ${blocked ? "blocked" : ""} ${available ? "day-available" : ""} ${partial ? "partial-availability" : ""} ${items.length ? "has-services" : ""} ${counts.unassigned ? "needs-assignment" : ""}" data-date="${date}" aria-label="${dateLabel(date)}${serviceLabels ? ", " + serviceLabels : ", sin servicios"}${hasBlocking ? ", " + blockedText : available ? ", disponible" : ""}${marks.has(date) ? ", marcado para actuar" : ""}" aria-pressed="${date === anchor}"><span class="day-number">${mode === "day" ? `<span class="strip-weekday">${new Date(date + "T12:00:00").toLocaleDateString("es-ES", { weekday: "short" })}</span><span class="strip-day">${d}</span>` : coord && mode !== "month" ? new Date(date + "T12:00:00").toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short" }) : d}</span>${counts.unassigned ? `<small class="calendar-count unassigned-count" title="${counts.unassigned} sin asignar"><span class="count-long">⚠ ${counts.unassigned} sin asignar</span><span class="count-short" aria-hidden="true">⚠ ${counts.unassigned}<span>sin asig.</span></span></small>` : ""}${counts.assigned ? `<small class="calendar-count assigned-count" title="${counts.assigned} asignados"><span class="count-long">✓ ${counts.assigned} ${counts.assigned === 1 ? "asignado" : "asignados"}</span><span class="count-short" aria-hidden="true">✓ ${counts.assigned}<span>asig.</span></span></small>` : ""}${counts.finished ? `<small class="calendar-count finished-count"><span class="count-long">${counts.finished} finalizado${counts.finished === 1 ? "" : "s"}</span><span class="count-short" aria-hidden="true">${counts.finished}<span>finaliz.</span></span></small>` : ""}${hasBlocking ? `<small class="unavailable-label ${partial ? "partial-label" : ""}" title="${blockedText}"><span class="count-long">${coord && !target ? (partial ? "Parcial" : "Total") + " · " + dayState.blocked + "/" + dayState.total + " no disp." : blockedText}</span><span class="count-short" aria-hidden="true">${coord && !target ? dayState.blocked + "/" + dayState.total : ""}<span>${partial ? "Parcial" : "No disp."}</span></span></small>` : ""}${marks.has(date) ? '<small class="marked-label">✓ Marcado</small>' : ""}</button>`;
+    const dayCell = `<button class="cal-day ${date === today() ? "today" : ""} ${date === anchor ? "focused" : ""} ${marks.has(date) ? "selected" : ""} ${blocked ? "blocked" : ""} ${available ? "day-available" : ""} ${partial ? "partial-availability" : ""} ${items.length ? "has-services" : ""} ${counts.unassigned ? "needs-assignment" : ""}" data-date="${date}" aria-label="${dateLabel(date)}${serviceLabels ? ", " + serviceLabels : ", sin servicios"}${hasBlocking ? ", " + blockedText : available ? ", disponible" : ""}${marks.has(date) ? ", marcado para actuar" : ""}" aria-pressed="${date === anchor}"><span class="day-number">${mode === "day" ? `<span class="strip-weekday">${new Date(date + "T12:00:00").toLocaleDateString("es-ES", { weekday: "short" })}</span><span class="strip-day">${d}</span>` : coord && mode !== "month" ? new Date(date + "T12:00:00").toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short" }) : d}</span>${counts.unassigned ? `<small class="calendar-count unassigned-count" title="${counts.unassigned} sin asignar"><span class="count-long">⚠ ${counts.unassigned} sin asignar</span><span class="count-short" aria-hidden="true">⚠ ${counts.unassigned}<span>sin asig.</span></span></small>` : ""}${counts.assigned ? `<small class="calendar-count assigned-count" title="${counts.assigned} asignados"><span class="count-long">✓ ${counts.assigned} ${counts.assigned === 1 ? "asignado" : "asignados"}</span><span class="count-short" aria-hidden="true">✓ ${counts.assigned}<span>asig.</span></span></small>` : ""}${counts.finished ? `<small class="calendar-count finished-count"><span class="count-long">${counts.finished} finalizado${counts.finished === 1 ? "" : "s"}</span><span class="count-short" aria-hidden="true">${counts.finished}<span>finaliz.</span></span></small>` : ""}${hasBlocking ? `<small class="unavailable-label ${partial ? "partial-label" : ""}" title="${blockedText}"><span class="count-long">${blockedText}</span><span class="count-short" aria-hidden="true"><span>${shortAvailability}</span></span></small>` : ""}${marks.has(date) ? '<small class="marked-label">✓ Marcado</small>' : ""}</button>`;
     cells +=
       mode === "day"
         ? dayCell
@@ -6818,7 +6871,7 @@ function calendar(coord) {
           .map(([short, full]) => `<span aria-label="${full}">${short}</span>`)
           .join("")}</div>`
       : ""
-  }${mode === "week" ? `<div class="planning-week-controls"><button type="button" class="secondary" data-action="planning-week-layout">${verticalWeek ? "Ver horas en horizontal" : "Ver horas en vertical"}</button><p class="hint">Desliza arriba o abajo sobre las fechas o usa la rueda para pasar los días.</p></div>` : ""}${mode === "month" ? `<div class="calendar-grid">${cells}</div>` : verticalWeek ? `<div class="hourly-calendar" tabindex="0" role="region" aria-label="Semana de 24 horas"><div class="planning-week-grid">${cells}</div></div>` : mode === "day" ? `<div class="planning-date-strip" role="group" aria-label="Elegir día de planificación">${cells}</div>${planningDayHours(list, anchor)}` : hourlyCalendar(cells)}<div class="calendar-legend"><span><i class="dot available-dot"></i> Disponible</span><span class="legend-unassigned">⚠ Sin asignar: necesita una persona</span><span>✓ Asignados: con persona</span>${coord && !target ? '<span><i class="dot partial-dot"></i> Parcial: parte del equipo bloqueada</span><span><i class="dot coral"></i> No disp.: todo el equipo bloqueado</span>' : '<span><i class="dot coral"></i> No disp. = no disponible</span>'}<span><i class="dot focus-dot"></i> Día consultado</span><span><i class="dot pale"></i> Marcado para actuar</span></div>${coord && !target && dailyTeamState(db, anchor).state === "empty" ? '<p class="hint">No hay personas activas en el equipo. No se indica disponibilidad.</p>' : ""}${canMark ? `<div class="availability-bar"><p aria-live="polite"><b>${marks.size} días marcados para actuar</b><small>Un clic consulta el día. Doble clic lo marca o desmarca; después aplica la disponibilidad.</small></p>${btn(marks.has(anchor) ? "Desmarcar día consultado" : "Marcar día consultado", "toggle-focused-day", `aria-pressed="${marks.has(anchor)}"`, "secondary")}${btn("Limpiar marcas", "clear-marked-days", "", "text")}${btn("No disponible", "block-days", "", "secondary")}${btn("Disponible", "free-days", "", "text")}${store.mode === "cloud" ? btn("Horas no disponibles", "hour-blocks", 'type="button"', "secondary") : ""}</div>` : '<p class="hint calendar-hint" title="Los colores representan bloqueos diarios del equipo activo; los horarios concretos se comprueban al asignar un servicio.">Selecciona una persona para cambiar bloqueos diarios. La franja se valida al asignar.</p>'}</section><section class="card daily"><span class="eyebrow">${dateLabel(anchor)}</span><h2>${coord && mode === "day" ? "Disponibilidad del día" : "Servicios del día"}</h2>${coord && mode === "day" ? "" : daily.length ? daily.map(serviceRow).join("") : empty("Día sin servicios.")}${coord ? btn("+ Crear este día", "create-service", "", "secondary full") : ""}${
+  }${mode === "week" ? `<div class="planning-week-controls"><button type="button" class="secondary" data-action="planning-week-layout">${verticalWeek ? "Ver horas en horizontal" : "Ver horas en vertical"}</button><p class="hint">Desliza arriba o abajo sobre las fechas o usa la rueda para pasar los días.</p></div>` : ""}${mode === "month" ? `<div class="calendar-grid">${cells}</div>` : verticalWeek ? `<div class="hourly-calendar" tabindex="0" role="region" aria-label="Semana de 24 horas"><div class="planning-week-grid">${cells}</div></div>` : mode === "day" ? `<div class="planning-date-strip" role="group" aria-label="Elegir día de planificación">${cells}</div>${planningDayHours(list, anchor)}` : hourlyCalendar(cells)}<div class="calendar-legend"><span><i class="dot available-dot"></i> Disponible</span><span class="legend-unassigned">⚠ Servicio sin asignar</span><span><i class="dot assigned-dot"></i> Servicio asignado</span>${coord && !target ? '<span><i class="dot partial-dot"></i> Libres: disponibilidad parcial</span><span><i class="dot coral"></i> Sin disponibilidad: nadie libre</span>' : '<span><i class="dot coral"></i> Sin disponibilidad</span>'}<span><i class="dot focus-dot"></i> Día consultado</span><span><i class="dot pale"></i> Marcado para actuar</span></div>${coord && !target && dailyTeamState(db, anchor).state === "empty" ? '<p class="hint">No hay personas activas en el equipo. No se indica disponibilidad.</p>' : ""}${canMark ? `<div class="availability-bar"><p aria-live="polite"><b>${marks.size} días marcados para actuar</b><small>Un clic consulta el día. Doble clic lo marca o desmarca; después aplica la disponibilidad.</small></p>${btn(marks.has(anchor) ? "Desmarcar día consultado" : "Marcar día consultado", "toggle-focused-day", `aria-pressed="${marks.has(anchor)}"`, "secondary")}${btn("Limpiar marcas", "clear-marked-days", "", "text")}${btn("No disponible", "block-days", "", "secondary")}${btn("Disponible", "free-days", "", "text")}${store.mode === "cloud" ? btn("Horas no disponibles", "hour-blocks", 'type="button"', "secondary") : ""}</div>` : '<p class="hint calendar-hint" title="Los colores representan bloqueos diarios del equipo activo; los horarios concretos se comprueban al asignar un servicio.">Selecciona una persona para cambiar bloqueos diarios. La franja se valida al asignar.</p>'}</section><section class="card daily"><span class="eyebrow">${dateLabel(anchor)}</span><h2>${coord && mode === "day" ? "Disponibilidad del día" : "Servicios del día"}</h2>${coord && mode === "day" ? "" : daily.length ? daily.map(serviceRow).join("") : empty("Día sin servicios.")}${coord ? btn("+ Crear este día", "create-service", "", "secondary full") : ""}${
     coord
       ? `<h3 class="availability-title">Disponibilidad del equipo</h3>${db.workers
           .filter((w) => !target || w.id === target)

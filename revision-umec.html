@@ -8,7 +8,7 @@
     <meta name="theme-color" content="#155b69" />
     <link rel="icon" type="image/png" sizes="32x32" href="umec-v2-icon-32.png">
     <link rel="apple-touch-icon" sizes="192x192" href="umec-v2-icon-192.png">
-    <title>UMEC Gestión · Revisión v5.0.18</title>
+    <title>UMEC Gestión · Revisión v5.0.19</title>
     <style>:root {
   --accent: #155b69;
   --ink: #203c44;
@@ -4769,6 +4769,21 @@ button.cal-day[data-date].has-services .calendar-count.assigned-count {
 .service-maps { display:inline-flex; align-items:center; gap:6px; }
 .service-maps svg { flex:none; }
 </style>
+<style>
+.timeline-event.timeline-running, .cal-day .calendar-running, .services-month-day .calendar-running {
+  background: var(--cal-pending);
+  color: var(--cal-pending-ink);
+  border-color: var(--cal-pending-line);
+}
+.cal-day .calendar-running, .services-month-day .calendar-running {
+  grid-column: 1 / -1;
+  border: 1px solid var(--cal-pending-line);
+  border-radius: 4px;
+  padding: 1px 3px;
+}
+.planning-month-mode .cal-day .calendar-running { font-size: 10px; }
+.planning-month-mode .cal-day .finished-count { grid-column: 1 / -1; }
+</style>
 </head>
   <body>
     <div id="app"></div>
@@ -5195,8 +5210,9 @@ function calendarServiceCounts(services) {
   const visible = services.filter((s) => s.status !== "cancelado");
   return {
     unassigned: visible.filter((s) => !s.worker_id && active(s)).length,
-    assigned: visible.filter((s) => !!s.worker_id).length,
-    finished: visible.filter((s) => !s.worker_id && !active(s)).length,
+    assigned: visible.filter((s) => !!s.worker_id && active(s) && s.status !== "en curso").length,
+    running: visible.filter((s) => s.status === "en curso").length,
+    finished: visible.filter((s) => s.status === "completado").length,
   };
 }
 
@@ -6232,7 +6248,7 @@ function login(message = "") {
         </div>
         <section class="access-card" aria-labelledby="access-title">
           <h1 id="access-title">Revisión de UMEC V2</h1>
-          <p class="access-intro">Versión 5.0.18 · Datos de ejemplo</p>
+          <p class="access-intro">Versión 5.0.19 · Datos de ejemplo</p>
           <p id="login-feedback" class="login-feedback" role="status">${esc(message)}</p>
             <div class="demo-options">
               ${btn("Demo administrador", "demo-admin", 'type="button"', "secondary full")}
@@ -6586,12 +6602,14 @@ function serviceTimeline(services, date, {
   const events = slots.map(({ service, start, end, lane }) => {
     const state = service.status === "completado"
       ? "timeline-inactive"
-      : service.worker_id ? "timeline-assigned" : "timeline-pending";
+      : service.status === "en curso" ? "timeline-running"
+        : service.worker_id ? "timeline-assigned" : "timeline-pending";
     const times = timelineTime(start) + "–" + timelineTime(end);
     const person = esc(worker(service.worker_id).name || "Sin asignar");
     const title = esc(client(service).name || service.title);
-    const label = `${times} · ${title} · ${esc(service.title)} · ${person} · ${esc(service.status)}${overnight(service) ? " · Turno completo " + serviceTimes(service) : ""}`;
-    return `<button type="button" class="timeline-event ${state}" data-service="${esc(service.id)}" style="--start:${100 * (start - first) / (last - first)}%;--duration:${100 * (end - start) / (last - first)}%;--lane:${lane}" aria-label="${label}" title="${label}"><strong>${times}</strong><span>${title}${service.status === "completado" ? " · Finalizado" : ""}</span></button>`;
+    const progress = service.status === "en curso" ? "En curso" : service.status === "completado" ? "Finalizado" : "";
+    const label = `${times} · ${title} · ${esc(service.title)} · ${person} · ${progress || esc(service.status)}${overnight(service) ? " · Turno completo " + serviceTimes(service) : ""}`;
+    return `<button type="button" class="timeline-event ${state}" data-service="${esc(service.id)}" style="--start:${100 * (start - first) / (last - first)}%;--duration:${100 * (end - start) / (last - first)}%;--lane:${lane}" aria-label="${label}" title="${label}">${progress ? `<strong class="timeline-progress">${progress}</strong><span>${times} · ${title}</span>` : `<strong>${times}</strong><span>${title}</span>`}</button>`;
   }).join("");
   if (vertical) {
     const axis = Array.from({ length: 25 }, (_, i) =>
@@ -6664,17 +6682,18 @@ function serviceMonthCalendar(visible, start, last) {
     const partial = day.state === "partial";
     const free = day.total - day.blocked;
     const availabilityLabel = blocked ? "No disponible" : partial ? free + (free === 1 ? " libre" : " libres") : "";
-    const finished = entries.filter((s) => s.status === "completado").length;
+    const { running, finished } = counts;
     const descriptions = [
       entries.length + " servicios",
       counts.unassigned ? counts.unassigned + " sin asignar" : "",
       counts.assigned ? counts.assigned + " asignados" : "",
       availabilityLabel,
-      finished ? finished + " finalizados" : "",
+      running ? running + " en curso" : "",
+      finished ? finished + (finished === 1 ? " finalizado" : " finalizados") : "",
     ]
       .filter(Boolean)
       .join(", ");
-    cells += `<button type="button" class="services-month-day ${available ? "day-available" : ""} ${blocked ? "blocked" : ""} ${date === servicesDate ? "is-anchor" : ""}" data-action="services-open-day" data-calendar-date="${date}" aria-label="${dateLabel(date)}, ${descriptions}. Abrir día" aria-pressed="${date === servicesDate}"><b>${n}</b>${counts.assigned ? `<small class="services-month-assigned">✓ ${counts.assigned}<span class="services-month-long"> asignado${counts.assigned === 1 ? "" : "s"}</span></small>` : ""}${counts.unassigned ? `<small class="services-month-pending">⚠ ${counts.unassigned}<span class="services-month-long"> sin asignar</span><span class="services-month-short" aria-hidden="true"> sin asig.</span></small>` : ""}${availabilityLabel ? `<small class="services-month-availability ${partial ? "partial-label" : "blocked-label"}">${availabilityLabel}</small>` : ""}${finished ? `<small class="services-month-neutral">${finished}<span class="services-month-long"> finalizado${finished === 1 ? "" : "s"}</span><span class="services-month-short" aria-hidden="true"> fin.</span></small>` : ""}</button>`;
+    cells += `<button type="button" class="services-month-day ${available ? "day-available" : ""} ${blocked ? "blocked" : ""} ${date === servicesDate ? "is-anchor" : ""}" data-action="services-open-day" data-calendar-date="${date}" aria-label="${dateLabel(date)}, ${descriptions}. Abrir día" aria-pressed="${date === servicesDate}"><b>${n}</b>${counts.assigned ? `<small class="services-month-assigned">✓ ${counts.assigned}<span class="services-month-long"> asignado${counts.assigned === 1 ? "" : "s"}</span></small>` : ""}${counts.unassigned ? `<small class="services-month-pending">⚠ ${counts.unassigned}<span class="services-month-long"> sin asignar</span><span class="services-month-short" aria-hidden="true"> sin asig.</span></small>` : ""}${availabilityLabel ? `<small class="services-month-availability ${partial ? "partial-label" : "blocked-label"}">${availabilityLabel}</small>` : ""}${running ? `<small class="calendar-running">${running} en curso</small>` : ""}${finished ? `<small class="services-month-neutral">${finished}<span class="services-month-long"> finalizado${finished === 1 ? "" : "s"}</span><span class="services-month-short" aria-hidden="true"> fin.</span></small>` : ""}</button>`;
   }
   for (let i = (offset + days) % 7; i > 0 && i < 7; i++)
     cells += '<span class="services-month-blank" aria-hidden="true"></span>';
@@ -6823,6 +6842,7 @@ function calendar(coord) {
       counts.assigned
         ? counts.assigned + (counts.assigned === 1 ? " asignado" : " asignados")
         : "",
+      counts.running ? counts.running + " en curso" : "",
       counts.finished
         ? counts.finished +
           (counts.finished === 1 ? " finalizado" : " finalizados")
@@ -6830,7 +6850,7 @@ function calendar(coord) {
     ]
       .filter(Boolean)
       .join(", ");
-    const dayCell = `<button class="cal-day ${date === today() ? "today" : ""} ${date === anchor ? "focused" : ""} ${marks.has(date) ? "selected" : ""} ${blocked ? "blocked" : ""} ${available ? "day-available" : ""} ${partial ? "partial-availability" : ""} ${items.length ? "has-services" : ""} ${counts.unassigned ? "needs-assignment" : ""}" data-date="${date}" aria-label="${dateLabel(date)}${serviceLabels ? ", " + serviceLabels : ", sin servicios"}${hasBlocking ? ", " + blockedText : available ? ", disponible" : ""}${marks.has(date) ? ", marcado para actuar" : ""}" aria-pressed="${date === anchor}"><span class="day-number">${mode === "day" ? `<span class="strip-weekday">${new Date(date + "T12:00:00").toLocaleDateString("es-ES", { weekday: "short" })}</span><span class="strip-day">${d}</span>` : coord && mode !== "month" ? new Date(date + "T12:00:00").toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short" }) : d}</span>${counts.unassigned ? `<small class="calendar-count unassigned-count" title="${counts.unassigned} sin asignar"><span class="count-long">⚠ ${counts.unassigned} sin asignar</span><span class="count-short" aria-hidden="true">⚠ ${counts.unassigned}<span>sin asig.</span></span></small>` : ""}${counts.assigned ? `<small class="calendar-count assigned-count" title="${counts.assigned} asignados"><span class="count-long">✓ ${counts.assigned} ${counts.assigned === 1 ? "asignado" : "asignados"}</span><span class="count-short" aria-hidden="true">✓ ${counts.assigned}<span>asig.</span></span></small>` : ""}${counts.finished ? `<small class="calendar-count finished-count"><span class="count-long">${counts.finished} finalizado${counts.finished === 1 ? "" : "s"}</span><span class="count-short" aria-hidden="true">${counts.finished}<span>finaliz.</span></span></small>` : ""}${hasBlocking ? `<small class="unavailable-label ${partial ? "partial-label" : ""}" title="${blockedText}"><span class="count-long">${blockedText}</span><span class="count-short" aria-hidden="true"><span>${shortAvailability}</span></span></small>` : ""}${marks.has(date) ? '<small class="marked-label">✓ Marcado</small>' : ""}</button>`;
+    const dayCell = `<button class="cal-day ${date === today() ? "today" : ""} ${date === anchor ? "focused" : ""} ${marks.has(date) ? "selected" : ""} ${blocked ? "blocked" : ""} ${available ? "day-available" : ""} ${partial ? "partial-availability" : ""} ${items.length ? "has-services" : ""} ${counts.unassigned ? "needs-assignment" : ""}" data-date="${date}" aria-label="${dateLabel(date)}${serviceLabels ? ", " + serviceLabels : ", sin servicios"}${hasBlocking ? ", " + blockedText : available ? ", disponible" : ""}${marks.has(date) ? ", marcado para actuar" : ""}" aria-pressed="${date === anchor}"><span class="day-number">${mode === "day" ? `<span class="strip-weekday">${new Date(date + "T12:00:00").toLocaleDateString("es-ES", { weekday: "short" })}</span><span class="strip-day">${d}</span>` : coord && mode !== "month" ? new Date(date + "T12:00:00").toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short" }) : d}</span>${counts.unassigned ? `<small class="calendar-count unassigned-count" title="${counts.unassigned} sin asignar"><span class="count-long">⚠ ${counts.unassigned} sin asignar</span><span class="count-short" aria-hidden="true">⚠ ${counts.unassigned}<span>sin asig.</span></span></small>` : ""}${counts.assigned ? `<small class="calendar-count assigned-count" title="${counts.assigned} asignados"><span class="count-long">✓ ${counts.assigned} ${counts.assigned === 1 ? "asignado" : "asignados"}</span><span class="count-short" aria-hidden="true">✓ ${counts.assigned}<span>asig.</span></span></small>` : ""}${mode === "month" && counts.running ? `<small class="calendar-count calendar-running">${counts.running} en curso</small>` : ""}${counts.finished ? `<small class="calendar-count finished-count" title="${counts.finished} finalizados"><span class="count-long">${counts.finished} finalizado${counts.finished === 1 ? "" : "s"}</span><span class="count-short" aria-hidden="true">${counts.finished} fin.</span></small>` : ""}${hasBlocking ? `<small class="unavailable-label ${partial ? "partial-label" : ""}" title="${blockedText}"><span class="count-long">${blockedText}</span><span class="count-short" aria-hidden="true"><span>${shortAvailability}</span></span></small>` : ""}${marks.has(date) ? '<small class="marked-label">✓ Marcado</small>' : ""}</button>`;
     cells +=
       mode === "day"
         ? dayCell

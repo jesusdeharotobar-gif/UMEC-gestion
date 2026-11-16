@@ -8,7 +8,7 @@
     <meta name="theme-color" content="#155b69" />
     <link rel="icon" type="image/png" sizes="32x32" href="umec-v2-icon-32.png">
     <link rel="apple-touch-icon" sizes="192x192" href="umec-v2-icon-192.png">
-    <title>UMEC Gestión · Revisión v2.2.14</title>
+    <title>UMEC Gestión · Revisión v2.2.15</title>
     <style>:root {
   --accent: #155b69;
   --ink: #203c44;
@@ -5080,22 +5080,35 @@ button.secondary.delete-client:hover { background:#fff3f4; }
   .admin-shell > .sidebar .nav-item > [aria-hidden="true"],
   .admin-shell > .sidebar .nav-item > [aria-hidden="true"] svg { width: 17px; height: 17px; }
   .admin-shell:has(> .sidebar) > .workspace { padding-bottom: calc(53px + env(safe-area-inset-bottom)); }
-  .admin-shell #content .employee-grid { grid-template-columns: minmax(0, 1fr); gap: 3px; }
-  .admin-shell #content .employee-card {
+  .admin-shell #content .employee-toolbar { justify-content: space-between; align-items: center; }
+  .admin-shell #content .employee-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    padding-inline: 8px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface-solid);
+  }
+  .admin-shell #content .employee-grid:empty { display: none; }
+  .admin-shell #content .employee-grid > .employee-card {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    gap: 3px 6px;
-    padding: 5px 7px;
-    border-radius: 8px;
+    gap: 2px 8px;
+    padding: 5px 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
   }
-  .admin-shell .employee-heading { gap: 5px; }
-  .admin-shell .employee-heading .person-avatar { width: 25px; height: 25px; }
-  .admin-shell #content .employee-heading h2 { font-size: 13px; }
-  .admin-shell .employee-card small { font-size: 10px; line-height: 1.2; }
-  .admin-shell .employee-card .tags { grid-row: 2; gap: 2px; }
+  .admin-shell #content .employee-grid > .employee-card + .employee-card { border-top: 1px solid var(--line); }
+  .admin-shell .employee-heading { grid-area: 1 / 1; }
+  .admin-shell .employee-heading .person-avatar { display: none; }
+  .admin-shell #content .employee-heading h2 { font-size: 13px; line-height: 1.2; }
+  .admin-shell .employee-card small { display: block; font-size: 10px; line-height: 1.2; }
+  .admin-shell .employee-card .tags { grid-area: 2 / 1; gap: 2px; }
   .admin-shell .employee-card .tags:empty { display: none; }
-  .admin-shell .employee-card .tags span { padding: 1px 4px; font-size: 10px; }
-  .admin-shell .employee-card > small { grid-column: 2; text-align: right; }
+  .admin-shell .employee-card .tags span { padding: 0 4px; font-size: 10px; }
+  .admin-shell .employee-card > small { grid-area: 2 / 2; text-align: right; }
   .admin-shell .employee-card .employee-profile { grid-area: 1 / 2; justify-self: end; }
   .admin-shell #service-form .availability-guide { margin: 5px 0; padding: 0 6px; }
   .admin-shell #service-form .availability-guide > h3 { display: none; }
@@ -6595,7 +6608,7 @@ function login(message = "") {
         </div>
         <section class="access-card" aria-labelledby="access-title">
           <h1 id="access-title">Revisión de UMEC V2</h1>
-          <p class="access-intro">Versión 2.2.14 · Datos de ejemplo</p>
+          <p class="access-intro">Versión 2.2.15 · Datos de ejemplo</p>
           <p id="login-feedback" class="login-feedback" role="status">${esc(message)}</p>
             <div class="demo-options">
               ${btn("Demo administrador", "demo-admin", 'type="button"', "secondary full")}
@@ -7272,7 +7285,7 @@ function calendar(coord) {
   }</section></div></div>`;
 }
 function workersView() {
-  return `<div class="toolbar"><p>${db.workers.length} personas en el equipo</p>${btn("+ Añadir empleado", "new-worker")}</div><div class="employee-grid">${db.workers
+  return `<div class="toolbar employee-toolbar"><p>${db.workers.length} personas en el equipo</p>${btn("+ Añadir empleado", "new-worker")}</div><div class="employee-grid">${db.workers
     .map(
       (w) =>
         `<article class="card employee-card"><div class="employee-heading"><span class="person-avatar green" aria-hidden="true">${esc(w.name?.[0] || "?")}</span><div><h2>${esc(w.name)}</h2><small>${[w.employee_number ? "N.º " + w.employee_number : "", w.town, w.phone].filter(Boolean).map(esc).join(" · ")}</small></div></div><div class="tags">${workerCities(

@@ -8,7 +8,7 @@
     <meta name="theme-color" content="#155b69" />
     <link rel="icon" type="image/png" sizes="32x32" href="umec-v2-icon-32.png">
     <link rel="apple-touch-icon" sizes="192x192" href="umec-v2-icon-192.png">
-    <title>UMEC Gestión · Revisión v2.2.6</title>
+    <title>UMEC Gestión · Revisión v2.2.7</title>
     <style>:root {
   --accent: #155b69;
   --ink: #203c44;
@@ -4831,6 +4831,15 @@ button.secondary.delete-client:hover { background:#fff3f4; }
 .settings-list summary > :is(.backup-shield, .settings-outline-icon) { display: inline-grid; place-items: center; }
 .settings-list :is(.backup-shield, .settings-outline-icon) svg { display:block; }
 </style>
+<style>
+.reports-layout { display:grid; gap:14px; grid-template-columns:repeat(2,minmax(0,1fr)); }
+.reports-layout > :first-child { grid-column:1/-1; }
+.reports-layout h2 { margin-top:0; }
+@media(max-width:620px) {
+  .reports-layout { grid-template-columns:1fr; }
+  .workspace .topbar .area-tabs:has(button:nth-child(5)) { grid-template-columns:repeat(3,minmax(0,1fr)); grid-auto-flow:row; }
+}
+</style>
 </head>
   <body>
     <div id="app"></div>
@@ -6308,7 +6317,7 @@ function login(message = "") {
         </div>
         <section class="access-card" aria-labelledby="access-title">
           <h1 id="access-title">Revisión de UMEC V2</h1>
-          <p class="access-intro">Versión 2.2.6 · Datos de ejemplo</p>
+          <p class="access-intro">Versión 2.2.7 · Datos de ejemplo</p>
           <p id="login-feedback" class="login-feedback" role="status">${esc(message)}</p>
             <div class="demo-options">
               ${btn("Demo administrador", "demo-admin", 'type="button"', "secondary full")}
@@ -6342,14 +6351,15 @@ function render() {
             "Cobros",
           ]
         : ["Inicio", "Agenda", "Servicios"];
-  const teamArea = area === "Coordinación" || page === "Cobros";
+  const teamArea = area === "Coordinación" || ["Cobros", "Informes"].includes(page);
   const topTabs = [
     "Mi gestión",
     ...(user.role === "admin" && menuModuleEnabled("Coordinación") ? ["Coordinación"] : []),
     ...(user.role === "admin" && menuModuleEnabled("Cobros") ? ["Cobros"] : []),
     ...(user.role === "admin" && menuModuleEnabled("Empleados") ? ["Empleados"] : []),
+    ...(user.role === "admin" ? ["Informes"] : []),
   ];
-  const currentTab = ["Empleados", "Cobros"].includes(page) ? page : area;
+  const currentTab = ["Empleados", "Cobros", "Informes"].includes(page) ? page : area;
   $("#app").innerHTML =
     `<div class="shell ${teamArea ? "team-area" : ""} ${menuCollapsed ? "menu-collapsed" : ""}">${teamArea ? "" : `<aside class="sidebar" id="main-menu"><a class="brand" href="#" data-action="home"><img src="${currentAppLogo()}" alt="UMEC Gestión"><span>UNA MANO EN CASA</span></a><p class="nav-caption">${area === "Coordinación" ? "ORGANIZAR EL EQUIPO" : "MI ESPACIO"}</p><nav aria-label="Menú principal">${nav.filter((n) => user.role !== "admin" || menuModuleEnabled(n)).map((n) => `<button data-page="${n}" class="nav-item ${n === page ? "current" : ""}" aria-label="${n === "Agenda" ? "Mi Agenda" : n}" title="${n === "Agenda" ? "Mi Agenda" : n}"><span aria-hidden="true">${icons[n]}</span><span class="nav-label">${n === "Crear servicios" ? '<span class="nav-label-full">Crear servicios</span><span class="nav-label-short" aria-hidden="true">Crear</span>' : n === "Agenda" ? '<span class="my-agenda-word" aria-hidden="true"><span class="my-agenda-ink">Mi</span></span><span class="my-agenda-title">Agenda</span>' : n}</span></button>`).join("")}</nav><button type="button" class="menu-toggle secondary" data-action="toggle-menu" aria-label="${menuCollapsed ? "Expandir menú" : "Recoger menú"}" title="${menuCollapsed ? "Expandir menú" : "Recoger menú"}" aria-expanded="${!menuCollapsed}" aria-controls="main-menu"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 6 8 12l6 6"/></svg></button></aside>`}<div class="workspace"><header class="topbar"><div class="topbar-navigation"><img class="team-logo ${teamArea ? "" : "mobile-header-logo"}" src="${currentAppLogo()}" alt="UMEC Gestión"><div class="area-tabs" role="group" aria-label="Área de trabajo">${topTabs.map((a) => `<button data-area="${a}" class="${currentTab === a ? "active" : ""}" aria-current="${currentTab === a ? "page" : "false"}">${a}</button>`).join("")}</div></div>${accountMenu()}</header><div class="mode-banner ${store.mode === "cloud" ? "cloud" : ""}"><span>${store.mode === "demo" ? "◉ DEMOSTRACIÓN · Datos ficticios guardados en este navegador" : "● CONECTADO · Cuenta única de UMEC"} </span>${store.mode === "demo" ? '<button data-action="logout">Salir de la demo</button>' : user.role === "admin" ? btn("Reservas web", "web-bookings", 'type="button"', "secondary") + btn("Solicitudes de acceso", "employee-requests", 'type="button"', "secondary") : ""}</div><main id="content" class="${page === "Planificación" ? "planning-page" : ""}"><div class="page-heading ${page === "Inicio" ? "home-heading" : ""}"><div><span class="eyebrow">${area === "Coordinación" ? "COORDINACIÓN DEL EQUIPO" : "UMEC GESTIÓN"}</span><h1 class="${page === "Inicio" ? "sr-only" : ""}">${page === "Inicio" ? "Resumen general" : page}</h1><p>${subtitle()}</p></div>${user.role === "admin" && page === "Planificación" ? `<div class="planning-header-actions">${btn("+ Crear servicio", "create-service")}${menuModuleEnabled("Clientes") ? `<div class="planning-client-actions">${btn(icons.Clientes + "<span>Clientes</span>", "coord-clients", "", "secondary")}${btn("+ Añadir cliente", "new-client", "", "secondary")}</div>` : ""}</div>` : user.role === "admin" && page === "Clientes" && area === "Coordinación" ? btn("Volver a Planificación", "coord", "", "secondary") : user.role === "admin" && page === "Cobros" ? btn('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6M6 17H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M6 14h12v7H6zM17 12h2"/></svg><span>Ver informe</span>', "view-payment-report", "", "secondary payment-report-button") : user.role === "admin" && ["Inicio", "Servicios"].includes(page) ? btn("+ Crear servicio", "create-service") : ""}</div>${body()}</main><footer>Una mano en casa <span>·</span> Gestión cercana, cada día.</footer></div></div>`;
   if (page === "Crear servicios" && editingServiceId && user.role === "admin") {
@@ -6449,6 +6459,7 @@ function subtitle() {
       "Tu calendario personal. Selecciona días para gestionar tu disponibilidad.",
     Servicios: "Consulta, organiza y sigue cada servicio.",
     Cobros: "Importes de los servicios y seguimiento de pagos.",
+    Informes: "Consulta, imprime y exporta los datos de tus servicios.",
     Ajustes: "Adapta UMEC Gestión a tu forma de trabajar.",
     Planificación: "Organiza servicios y disponibilidad de todo el equipo.",
     Empleados: "Personas, zonas y datos de contacto del equipo.",
@@ -6470,6 +6481,8 @@ function body() {
       return servicesView();
     case "Cobros":
       return payments();
+    case "Informes":
+      return reportsView();
     case "Empleados":
       return workersView();
     case "Ajustes":
@@ -6996,6 +7009,62 @@ function paymentServices() {
   return db.services.filter((s) => s.status !== "cancelado")
     .sort((a, b) => b.date.localeCompare(a.date) || b.start.localeCompare(a.start));
 }
+let reportsPeriod = "month";
+let reportsDate = today();
+
+function reportsRange(date, period) {
+  const [year, month] = date.split("-").map(Number);
+  const size = period === "year" ? 12 : period === "quarter" ? 3 : 1;
+  const startMonth = Math.floor((month - 1) / size) * size;
+  const iso = (m, day) => new Date(Date.UTC(year, m, day)).toISOString().slice(0, 10);
+  return { first: iso(startMonth, 1), last: iso(startMonth + size, 0) };
+}
+function reportPeriodServices() {
+  const { first, last } = reportsRange(reportsDate, reportsPeriod);
+  return paymentServices().filter(s => s.date >= first && s.date <= last);
+}
+function reportsView() {
+  if (user.role !== "admin") return "";
+  const rows = reportPeriodServices();
+  const { first, last } = reportsRange(reportsDate, reportsPeriod);
+  return `<div class="reports-layout">
+    <section class="card"><h2>Resumen de ingresos</h2>
+      <div class="form-grid"><label>Período<select id="reports-period">
+        ${[["month","Mes"],["quarter","Trimestre"],["year","Año"]].map(([value,label]) => `<option value="${value}" ${value === reportsPeriod ? "selected" : ""}>${label}</option>`).join("")}
+      </select></label><label>Fecha de referencia<input id="reports-date" type="date" min="1900-01-01" max="9999-12-31" value="${esc(reportsDate)}"></label></div>
+      <p class="hint">${esc(dateLabel(first))} – ${esc(dateLabel(last))} · ${rows.length} servicios</p>
+      ${paymentSummary(rows)}
+      <p class="hint">El período se calcula por fecha del servicio. «Cobrado» refleja su estado de pago actual.</p>
+    </section>
+    <section class="card"><h2>Informe de cobros</h2><p>Abre el informe del período para descargarlo o imprimirlo.</p>${btn("Ver informe", "view-payment-report", 'type="button"', "secondary")}</section>
+    <section class="card"><h2>Para la gestoría</h2><p>Descarga los servicios del período con importes, estado y método de pago. El CSV se puede abrir en Excel.</p>
+      <p class="hint">Exportación de gestión. No genera facturas ni libros fiscales.</p>
+      ${btn("Descargar CSV", "export-reports-csv", rows.length ? 'type="button"' : 'type="button" disabled', "secondary")}
+    </section>
+  </div>`;
+}
+function reportsCSV(rows) {
+  const quote = value => {
+    const raw = String(value ?? "");
+    const safe = /^[\t\r\n]|^\s*[=+@-]/.test(raw) ? "'" + raw : raw;
+    return '"' + safe.replaceAll('"','""') + '"';
+  };
+  const header = ["Referencia", "Fecha del servicio", "Cliente", "Servicio", "Importe EUR", "Estado del cobro", "Método de pago"];
+  const records = rows.map(s => [paymentReference(s), s.date, client(s).name || "", s.title,
+    Number(s.amount || 0).toFixed(2).replace(".", ","), s.paid ? "Cobrado" : "Pendiente", s.payment_method || ""]);
+  return "\uFEFF" + [header, ...records].map(row => row.map(quote).join(";")).join("\r\n");
+}
+function exportReportsCSV() {
+  const rows = reportPeriodServices();
+  if (user.role !== "admin" || !rows.length) return;
+  const { first, last } = reportsRange(reportsDate, reportsPeriod);
+  const url = URL.createObjectURL(new Blob([reportsCSV(rows)], { type: "text/csv;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "UMEC-gestoria-" + first + "--" + last + ".csv";
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 function paymentSummary(list, className = "stats") {
   const total = (entries) => entries.reduce((amount, entry) => amount + Number(entry.amount || 0), 0);
   return `<div class="${className}"><article><span>Total de servicios</span><b>${euro(total(list))}</b></article><article><span>Cobrado</span><b>${euro(total(list.filter((s) => s.paid)))}</b></article><article><span>Pendiente</span><b>${euro(total(list.filter((s) => !s.paid)))}</b></article></div>`;
@@ -7102,8 +7171,8 @@ const paymentReportModes = {
   pending: "Solo pendientes de cobro",
   paid: "Solo servicios cobrados",
 };
-function paymentReport(mode = "all", includeIndex = false) {
-  const list = paymentServices().filter((s) =>
+function paymentReport(mode = "all", includeIndex = false, services = paymentServices()) {
+  const list = services.filter((s) =>
     mode === "all" || (mode === "paid" ? s.paid : !s.paid)
   );
   const first = list.at(-1)?.date;
@@ -7124,7 +7193,7 @@ function paymentReport(mode = "all", includeIndex = false) {
   </article>`;
 }
 function showPaymentReport() {
-  dialog("Vista previa del informe", `${paymentReport()}<div class="form-actions">
+  dialog("Vista previa del informe", `${paymentReport("all", false, page === "Informes" ? reportPeriodServices() : undefined)}<div class="form-actions">
     <label class="report-index-option"><input type="checkbox" id="payment-include-index"> Incluir índice interno (número y nombre)</label>
     ${btn("Descargar informe", "download-payment-report", "", "secondary")}
     ${btn("Imprimir", "print-payment-report")}
@@ -7135,7 +7204,7 @@ function showPaymentReport() {
   </div>`, "payment-report-dialog");
 }
 function selectedPaymentReport() {
-  return paymentReport($("#payment-print-mode")?.value || "all", $("#payment-include-index")?.checked === true);
+  return paymentReport($("#payment-print-mode")?.value || "all", $("#payment-include-index")?.checked === true, page === "Informes" ? reportPeriodServices() : undefined);
 }
 function refreshPaymentReport() {
   $(".payment-report-dialog .report-paper").outerHTML = selectedPaymentReport();
@@ -7839,6 +7908,9 @@ document.addEventListener("click", (e) => {
         $("#payment-results").innerHTML = paymentResults();
         ($("#payment-results [data-action='" + action + "']:not(:disabled)") ||
           $("#payment-results nav button:not(:disabled)"))?.focus();
+        break;
+      case "export-reports-csv":
+        exportReportsCSV();
         break;
       case "view-payment-report":
         if (user.role === "admin") showPaymentReport();
@@ -8587,6 +8659,12 @@ document.addEventListener("change", (e) => {
   if (e.target.closest("#appearance-form")) previewAppearance(e.target);
   const id = e.target.id;
   if (id === "payment-print-mode" || id === "payment-include-index") refreshPaymentReport();
+  if (id === "reports-period" || id === "reports-date") {
+    if (id === "reports-period") reportsPeriod = e.target.value;
+    else if (e.target.value && e.target.validity.valid) reportsDate = e.target.value;
+    render();
+    $("#" + id)?.focus({ preventScroll: true });
+  }
   if (id === "payment-filter") {
     filter = e.target.value;
     paymentPage = 0;

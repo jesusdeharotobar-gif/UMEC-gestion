@@ -7,7 +7,7 @@
     <link rel="manifest" href="umec-v2.webmanifest?v=503">
     <link rel="icon" type="image/png" sizes="32x32" href="umec-v2-icon-32.png">
     <link rel="apple-touch-icon" sizes="192x192" href="umec-v2-icon-192.png">
-    <title>UMEC Gestión · UMEC V2 v5.0.24</title>
+    <title>UMEC Gestión · UMEC V2 v2.2.4</title>
     <style>:root {
   --accent: #155b69;
   --ink: #203c44;
@@ -4819,6 +4819,13 @@ button.cal-day[data-date].has-services .calendar-count.assigned-count {
 .report-index-option { display:inline-flex; flex-direction:row; align-items:center; gap:6px; }
 .report-index-option input { width:auto; }
 </style>
+<style>
+.planning-week-mode [data-planning-date] > .cal-day.focused { outline-offset: -3px; }
+button.secondary.delete-client { background: #fff; color:#a52d38; border-color:#e2bbc0; }
+button.secondary.delete-client:hover { background:#fff3f4; }
+.team-role-row { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; padding:10px 0; border-top:1px solid var(--line); }
+.team-role-row small { display:block; color:var(--muted); }
+</style>
 </head>
   <body>
     <div id="app"></div>
@@ -5290,6 +5297,7 @@ class DemoStore {
     this.mode = "demo";
     this.key = KEY;
     this.db = JSON.parse(localStorage.getItem(KEY) || "null") || seed();
+    user.role = this.db.demoRoles?.[user.id] || user.role;
     for (const [id, name, phone, town] of [
       ["w3", "Marta", "600 000 012", "Aspe"],
       ["w4", "Diego", "600 000 013", "Crevillente"],
@@ -6429,7 +6437,6 @@ function accountMenu() {
   </summary><div class="account-options">
     ${btn("Mi perfil", "account-profile", "", "text")}
     ${btn(icons.Ajustes + "<span>Ajustes</span>", "account-settings", "", "text")}
-    ${store.mode === "cloud" ? btn("Notificaciones", "push-settings", 'type="button"', "text") : ""}
     ${btn('<span aria-hidden="true">↪</span> ' + (store.mode === "demo" ? "Salir de la demo" : "Cerrar sesión"), "logout", 'type="button"', "text danger account-logout")}
   </div></details></div>`;
 }
@@ -7243,8 +7250,24 @@ function appearanceForm() {
 function businessSettings() {
   return `<details class="card"><summary>Métodos de pago</summary><div class="details-body"><form id="payment-methods-form"><p class="hint">Activa los métodos internos y elige cuáles se mostrarán al conectar la web.</p>${paymentMethods().map((m, i) => `<fieldset><legend>${esc(m.name)}</legend><label><input type="checkbox" name="enabled-${i}" ${m.enabled ? "checked" : ""}> Activo</label><label><input type="checkbox" name="web-${i}" ${m.web ? "checked" : ""}> Visible en la web</label></fieldset>`).join("")}<label>Añadir método<input name="new_method" maxlength="60"></label><button class="primary">Guardar métodos</button><p class="form-error" role="alert"></p></form></div></details></section><section class="settings-group"><h2>Equipo y aplicación</h2>${coverageSettings()}<details class="card"><summary>Módulos del menú</summary><div class="details-body"><form id="menu-modules-form"><p class="hint">Elige qué accesos aparecen en el menú de administración.</p>${menuModules.map((name) => `<label><input type="checkbox" name="module" value="${name}" ${menuModuleEnabled(name) ? "checked" : ""}> ${name}</label>`).join("")}<button class="primary">Guardar menú</button><p class="form-error" role="alert"></p></form></div></details>`;
 }
+function demoTeamRoles() {
+  const roles = store.db.demoRoles || {};
+  return store.db.workers.filter(w => ["admin-demo", "worker-demo"].includes(w.user_id))
+    .map(w => ({ user_id: w.user_id, name: w.name, role: roles[w.user_id] || (w.user_id === "admin-demo" ? "admin" : "worker") }));
+}
+async function showTeamRoles() {
+  const profiles = store.mode === "demo" ? demoTeamRoles() :
+    await store.request("/rest/v1/rpc/umec2_team_roles", { method: "POST", body: { p_company: user.company_id } });
+  const adminCount = profiles.filter(p => p.role === "admin").length;
+  dialog("Accesos y roles", '<p>Puedes añadir administradores o pasar una cuenta a trabajador. Debe quedar al menos un administrador.</p>' +
+    profiles.map(profile => {
+      const next = profile.role === "admin" ? "worker" : "admin";
+      const denied = profile.role === "admin" && adminCount === 1;
+      return `<div class="team-role-row"><div><b>${esc(profile.name)}${profile.user_id === user.id ? " · Tú" : ""}</b><small>${profile.role === "admin" ? "Administrador" : "Trabajador"}</small></div><button class="secondary" type="button" data-action="change-team-role" data-id="${esc(profile.user_id)}" data-role="${next}" ${denied ? 'disabled title="Debe quedar al menos un administrador."' : ""}>${next === "admin" ? "Hacer administrador" : "Pasar a trabajador"}</button></div>`;
+    }).join(""));
+}
 function settings() {
-  return `<div class="settings-list">${user.role === "admin" ? `<section class="settings-group"><h2>Servicios y cobros</h2><details class="card"><summary><span>€</span> Tarifas <small>Servicios y precios de venta por hora</small></summary><div class="details-body">${db.tariffs.map((t) => `<div class="tariff-row"><b>${esc(t.name)}</b><span>${euro(t.price)}/h</span><button class="text" data-tariff="${t.id}">Editar</button></div>`).join("")}${btn("+ Añadir tarifa", "new-tariff", "", "secondary")}</div></details>${businessSettings()}<details class="card"><summary><span>◐</span> Apariencia <small>Skins y color personalizado</small></summary>${appearanceForm()}${appLogoSettings()}</details></section>` : ""}<section class="settings-group"><h2>Cuenta y datos</h2><details class="card"><summary><span>⌑</span> Contraseña <small>Seguridad de tu cuenta</small></summary><div class="details-body">${store.mode === "demo" ? "<p>La demostración no utiliza contraseñas. El acceso real tiene una sola contraseña para ambas áreas.</p>" : '<form id="password-form"><label>Nueva contraseña<input name="password" type="password" autocomplete="new-password" minlength="12" required></label><label>Repetir contraseña<input name="confirm" type="password" autocomplete="new-password" minlength="12" required></label><button class="primary">Cambiar contraseña</button></form>'}</div></details><details class="card"><summary><span>↻</span> Sincronización <small>${store.mode === "demo" ? "Guardado local de la demostración" : "Datos compartidos mediante Supabase"}</small></summary><div class="details-body"><p>${store.mode === "demo" ? "Los datos de ejemplo permanecen en este navegador. No se envían a Supabase." : "Los cambios se guardan en la nube. Usa Actualizar para recibir cambios de otras personas."}</p>${btn("Actualizar datos", "sync", "", "secondary")}</div></details>${user.role === "admin" ? `<details class="card"><summary><span>⇩</span> Copias de seguridad <small>Descargar y conservar tus datos</small></summary><div class="details-body"><p>Descarga una copia en formato JSON. Contiene los datos a los que tiene acceso tu cuenta.</p>${btn("Descargar copia", "backup", "", "secondary")}${store.mode === "demo" ? '<label class="file-label">Restaurar copia en la demostración<input id="restore-file" type="file" accept="application/json"></label><p class="hint">Se pedirá confirmar antes de sustituir los datos locales.</p>' : '<p class="hint">La restauración en la nube se realiza tras revisar la copia, para evitar sustituir trabajo del equipo.</p>'}</div></details>` : ""}</section></div>`;
+  return `<div class="settings-list">${user.role === "admin" ? `<section class="settings-group"><h2>Servicios y cobros</h2><details class="card"><summary><span>€</span> Tarifas <small>Servicios y precios de venta por hora</small></summary><div class="details-body">${db.tariffs.map((t) => `<div class="tariff-row"><b>${esc(t.name)}</b><span>${euro(t.price)}/h</span><button class="text" data-tariff="${t.id}">Editar</button></div>`).join("")}${btn("+ Añadir tarifa", "new-tariff", "", "secondary")}</div></details>${businessSettings()}<details class="card"><summary><span>◐</span> Apariencia <small>Skins y color personalizado</small></summary>${appearanceForm()}${appLogoSettings()}</details></section>` : ""}<section class="settings-group"><h2>Cuenta y datos</h2><details class="card"><summary><span>◉</span> Notificaciones <small>Avisos en este dispositivo</small></summary><div class="details-body"><p>Recibe avisos de tu cuenta en este dispositivo.</p>${store.mode === "demo" ? '<p class="hint">Los avisos push se activan desde tu cuenta en la versión real.</p>' : `<div class="form-actions">${btn("Desactivar", "push-disable", 'type="button"', "secondary")}${btn("Activar notificaciones", "push-enable", 'type="button"')}</div>`}</div></details>${user.role === "admin" ? `<details class="card"><summary><span>⚿</span> Accesos y roles <small>Administradores y trabajadores</small></summary><div class="details-body"><p>Gestiona el rol de las cuentas vinculadas al equipo. Puedes tener varios administradores.</p>${btn("Gestionar roles", "manage-team-roles", 'type="button"', "secondary")}</div></details>` : ""}<details class="card"><summary><span>⌑</span> Contraseña <small>Seguridad de tu cuenta</small></summary><div class="details-body">${store.mode === "demo" ? "<p>La demostración no utiliza contraseñas. El acceso real tiene una sola contraseña para ambas áreas.</p>" : '<form id="password-form"><label>Nueva contraseña<input name="password" type="password" autocomplete="new-password" minlength="12" required></label><label>Repetir contraseña<input name="confirm" type="password" autocomplete="new-password" minlength="12" required></label><button class="primary">Cambiar contraseña</button></form>'}</div></details><details class="card"><summary><span>↻</span> Sincronización <small>${store.mode === "demo" ? "Guardado local de la demostración" : "Datos compartidos mediante Supabase"}</small></summary><div class="details-body"><p>${store.mode === "demo" ? "Los datos de ejemplo permanecen en este navegador. No se envían a Supabase." : "Los cambios se guardan en la nube. Usa Actualizar para recibir cambios de otras personas."}</p>${btn("Actualizar datos", "sync", "", "secondary")}</div></details>${user.role === "admin" ? `<details class="card"><summary><span>⇩</span> Copias de seguridad <small>Descargar y conservar tus datos</small></summary><div class="details-body"><p>Descarga una copia en formato JSON. Contiene los datos a los que tiene acceso tu cuenta.</p>${btn("Descargar copia", "backup", "", "secondary")}${store.mode === "demo" ? '<label class="file-label">Restaurar copia en la demostración<input id="restore-file" type="file" accept="application/json"></label><p class="hint">Se pedirá confirmar antes de sustituir los datos locales.</p>' : '<p class="hint">La restauración en la nube se realiza tras revisar la copia, para evitar sustituir trabajo del equipo.</p>'}</div></details>` : ""}</section></div>`;
 }
 function dialog(title, content, className = "") {
   $("dialog")?.remove();
@@ -7298,7 +7321,7 @@ function personForm(kind, id) {
       : id
         ? "Ficha de empleado"
         : "Añadir empleado",
-    `<form id="person-form" data-table="${kind}">${isClient && id ? clientServiceSummary(id) : ""}<input type="hidden" name="id" value="${esc(x.id || "")}"><label>${isClient ? "Nombre y apellidos" : "Nombre"}<input name="name" ${isClient ? 'autocomplete="name"' : ""} required value="${esc(x.name || "")}"></label><label>Teléfono<input name="phone" type="tel" required value="${esc(x.phone || "")}"></label><label>Correo electrónico<input type="email" name="email" autocomplete="email" value="${esc(x.email || "")}"></label>${isClient ? `${id ? `<label>Dirección<input name="address" required value="${esc(x.address || "")}"></label>` : `<fieldset class="client-address"><legend>Dirección</legend><div class="client-address-grid"><label>Calle<input name="street" autocomplete="address-line1" required></label><label>Número de puerta<input name="door_number" required></label></div></fieldset>`}<label>Zona<input name="zone" required value="${esc(x.zone || "")}"></label><label>Información para la atención<textarea name="notes">${esc(x.notes || "")}</textarea></label>` : `<label>Número de empleado<input name="employee_number" type="number" min="1" max="2147483647" step="1" placeholder="Automático" value="${esc(x.employee_number ?? "")}" ${user.role !== "admin" ? "readonly" : ""} ${x.id ? "required" : ""}></label>${workerZoneFields(x)}<p class="hint">${x.user_id ? "Esta ficha ya tiene una cuenta vinculada." : "La ficha organiza el equipo. El alta de acceso se vincula con el usuario de Supabase al activar la cuenta."}</p>`}<div class="${isClient ? "client-form-footer" : "employee-form-footer"}">${!isClient && x.id && user.role === "admin" ? btn("Borrar empleado", "delete-worker", 'type="button"', "secondary delete-worker") : ""}<div class="person-form-buttons"><button type="button" class="secondary" data-action="close-dialog">Cancelar</button><button class="primary">Guardar ficha</button></div>${isClient && id ? clientContactLinks(x) : ""}</div><p class="form-error" role="alert"></p></form>`,
+    `<form id="person-form" data-table="${kind}">${isClient && id ? clientServiceSummary(id) : ""}<input type="hidden" name="id" value="${esc(x.id || "")}"><label>${isClient ? "Nombre y apellidos" : "Nombre"}<input name="name" ${isClient ? 'autocomplete="name"' : ""} required value="${esc(x.name || "")}"></label><label>Teléfono<input name="phone" type="tel" required value="${esc(x.phone || "")}"></label><label>Correo electrónico<input type="email" name="email" autocomplete="email" value="${esc(x.email || "")}"></label>${isClient ? `${id ? `<label>Dirección<input name="address" required value="${esc(x.address || "")}"></label>` : `<fieldset class="client-address"><legend>Dirección</legend><div class="client-address-grid"><label>Calle<input name="street" autocomplete="address-line1" required></label><label>Número de puerta<input name="door_number" required></label></div></fieldset>`}<label>Zona<input name="zone" required value="${esc(x.zone || "")}"></label><label>Información para la atención<textarea name="notes">${esc(x.notes || "")}</textarea></label>` : `<label>Número de empleado<input name="employee_number" type="number" min="1" max="2147483647" step="1" placeholder="Automático" value="${esc(x.employee_number ?? "")}" ${user.role !== "admin" ? "readonly" : ""} ${x.id ? "required" : ""}></label>${workerZoneFields(x)}<p class="hint">${x.user_id ? "Esta ficha ya tiene una cuenta vinculada." : "La ficha organiza el equipo. El alta de acceso se vincula con el usuario de Supabase al activar la cuenta."}</p>`}<div class="${isClient ? "client-form-footer" : "employee-form-footer"}">${isClient && x.id && user.role === "admin" ? btn("Borrar cliente", "delete-client", 'type="button"', "secondary delete-client") : ""}${!isClient && x.id && user.role === "admin" ? btn("Borrar empleado", "delete-worker", 'type="button"', "secondary delete-worker") : ""}<div class="person-form-buttons"><button type="button" class="secondary" data-action="close-dialog">Cancelar</button><button class="primary">Guardar ficha</button></div>${isClient && id ? clientContactLinks(x) : ""}</div><p class="form-error" role="alert"></p></form>`,
     isClient ? "client-dialog" : "",
   );
 }
@@ -7659,6 +7682,29 @@ document.addEventListener("click", (e) => {
   if (!action) return;
   run(async () => {
     switch (action) {
+      case "manage-team-roles":
+        if (user.role === "admin") await showTeamRoles();
+        break;
+      case "change-team-role": {
+        if (user.role !== "admin" || !["admin","worker"].includes(t.dataset.role)) break;
+        const target = t.dataset.id, role = t.dataset.role;
+        if (!window.confirm(role === "admin" ? "¿Dar acceso de administrador a esta cuenta?" : "¿Cambiar esta cuenta a trabajador?")) break;
+        if (store.mode === "demo") {
+          const people = demoTeamRoles();
+          const member = people.find(p => p.user_id === target);
+          if (!member || (member.role === "admin" && role === "worker" && people.filter(p => p.role === "admin").length < 2)) throw Error("Debe quedar al menos un administrador.");
+          store.db.demoRoles = { ...store.db.demoRoles, [target]: role };
+          if (user.id === target) store.user.role = role;
+          store.save();
+        } else {
+          await store.request("/rest/v1/rpc/umec2_set_team_role", { method: "POST", body: { p_company: user.company_id, p_user: target, p_role: role } });
+        }
+        await refresh();
+        if ((store.user || user).role === "admin") await showTeamRoles();
+        else $("dialog")?.close();
+        toast("Rol actualizado.");
+        break;
+      }
       case "push-settings":
         if (store?.mode === "cloud") {
           $(".account-menu").open = false;
@@ -7724,6 +7770,33 @@ document.addEventListener("click", (e) => {
       case "home":
         go("Inicio");
         break;
+      case "delete-client": {
+        if (user.role !== "admin") break;
+        const form = t.closest("#person-form");
+        const customer = form?.dataset.table === "clients" && db.clients.find(c => c.id === form.elements.id.value);
+        if (!customer) break;
+        const feedback = form.querySelector(".form-error");
+        if (db.services.some(s => s.client_id === customer.id)) {
+          feedback.textContent = "Este cliente tiene servicios vinculados. Su ficha se conserva para mantener el historial.";
+          break;
+        }
+        if (!window.confirm("¿Borrar la ficha de " + customer.name + "?")) break;
+        try {
+          if (store.mode === "demo") {
+            store.db.clients = store.db.clients.filter(c => c.id !== customer.id);
+            store.save();
+          } else {
+            await store.request("/rest/v1/rpc/umec2_delete_client", { method: "POST", body: { p_company: user.company_id, p_client: customer.id } });
+          }
+        } catch (error) {
+          feedback.textContent = error.message;
+          break;
+        }
+        form.closest("dialog").close();
+        await refresh();
+        toast("Ficha de cliente borrada.");
+        break;
+      }
       case "delete-worker": {
         if (user.role !== "admin") return;
         const form = t.closest("#person-form");

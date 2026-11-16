@@ -7,7 +7,7 @@
     <link rel="manifest" href="umec-v2.webmanifest?v=503">
     <link rel="icon" type="image/png" sizes="32x32" href="umec-v2-icon-32.png">
     <link rel="apple-touch-icon" sizes="192x192" href="umec-v2-icon-192.png">
-    <title>UMEC Gestión · UMEC V2 v5.0.10</title>
+    <title>UMEC Gestión · UMEC V2 v5.0.12</title>
     <style>:root {
   --accent: #155b69;
   --ink: #203c44;
@@ -4691,6 +4691,15 @@ dialog form label :is(input, select, textarea) { font-weight: 400; }
   .mode-banner button.pending-request { animation: none; }
 }
 </style>
+<style>
+.cal-day.day-available, .cal-day.day-available:hover {
+  background: #bfe9ca;
+  border-color: #549768;
+  color: #143e26;
+}
+.cal-day.day-available.selected { border-color: var(--mark-line); }
+.calendar-legend .dot.available-dot { background: #bfe9ca; border: 1px solid #549768; }
+</style>
 </head>
   <body>
     <div id="app"></div>
@@ -6433,14 +6442,14 @@ function planningHourCells(date, first, last) {
 function serviceTimeline(services, date, {
   vertical = false, bookable = false, first = 0, last = 1440,
 } = {}) {
-  const segments = services.map((s) => serviceSegment(s, date))
+  const segments = services.filter((s) => s.status !== "cancelado").map((s) => serviceSegment(s, date))
     .filter((slot) => slot && slot.start < last && slot.end > first)
     .map((slot) => ({ ...slot, start: Math.max(slot.start, first), end: Math.min(slot.end, last) }));
   const slots = timelineLanes(segments);
   const hourCells = bookable ? planningHourCells(date, first, last) : "";
   const tracks = Math.max(1, ...slots.map(({ lane }) => lane + 1));
   const events = slots.map(({ service, start, end, lane }) => {
-    const state = service.status === "cancelado" || service.status === "completado"
+    const state = service.status === "completado"
       ? "timeline-inactive"
       : service.worker_id ? "timeline-assigned" : "timeline-pending";
     const times = timelineTime(start) + "–" + timelineTime(end);
@@ -6530,10 +6539,13 @@ function serviceMonthCalendar(visible, start, last) {
   return `<p class="hint">Pulsa un día para consultar sus servicios.</p><div class="services-month-weekdays">${["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map((d) => `<span>${d}</span>`).join("")}</div><div class="services-month-grid" aria-label="Calendario mensual de servicios">${cells}</div>`;
 }
 function servicesInfoList(list) {
+  if (filter === "cancelado") {
+    return `<section class="card"><h2>Servicios cancelados</h2>${list.length ? list.map(serviceRow).join("") : empty("No hay servicios cancelados.")}</section>`;
+  }
   const pending = list.filter((s) => !s.worker_id && active(s)),
     period = serviceCalendarPeriod(),
     visible = list.filter(
-      (s) => s.date <= period.last && (s.date >= period.start || serviceOnDate(s, period.start)),
+      (s) => s.status !== "cancelado" && s.date <= period.last && (s.date >= period.start || serviceOnDate(s, period.start)),
     );
   const name =
     servicesViewMode === "day"
@@ -6572,6 +6584,7 @@ function servicesView() {
           .includes(query.toLowerCase()),
     )
     .sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start));
+  if (filter !== "cancelado") list = list.filter((s) => s.status !== "cancelado");
   return `<div class="toolbar">${searchInput("Buscar un servicio o cliente")}<label>Estado<select id="status-filter"><option value="">Todos los estados</option>${[
     ["today", "Servicios de hoy"],
     ["unassigned", "Sin asignar"],
@@ -6595,13 +6608,19 @@ function tariffPriceLabel(t) {
       : "Total según horas")
   );
 }
+function canCancelService(s) {
+  return user?.role === "admin" && Boolean(s?.id) && active(s);
+}
+function cancelServiceButton(s) {
+  return canCancelService(s) ? btn("Cancelar servicio", "cancel-service", 'type="button" data-id="' + esc(s.id) + '"', "secondary danger") : "";
+}
 function serviceForm(s = {}) {
   const sel = s.worker_id || "",
     c = client(s);
   const tariff = s.id
     ? db.tariffs.find((t) => t.name === s.title)
     : db.tariffs[0];
-  return `<form id="service-form" class="card form-card" data-end-mode="${s.id ? "manual" : "auto"}"><input type="hidden" name="id" value="${esc(s.id || "")}"><div class="service-customer"><div class="form-section-title"><span>01</span><div><h2>Cliente y atención</h2><p>Busca un cliente existente por su nombre o teléfono.</p></div></div><div class="client-picker"><label for="client-search">Cliente</label><input id="client-search" placeholder="Escribe un nombre o teléfono" autocomplete="off" required role="combobox" aria-autocomplete="list" aria-controls="client-results" aria-describedby="client-info" aria-expanded="false" value="${esc(c.name || "")}"><input type="hidden" name="client_id" value="${esc(s.client_id || "")}"><div id="client-results" role="listbox" aria-label="Clientes coincidentes" hidden></div></div><p class="hint" id="client-info">${esc(c.address || "Selecciona un cliente para consultar su dirección.")}</p><div class="form-grid"><label>Tipo de servicio<select name="tariff" id="tariff-select"><option value="" ${!tariff ? "selected" : ""}>Personalizado</option>${db.tariffs.map((t) => `<option value="${t.id}" ${tariff?.id === t.id ? "selected" : ""}>${esc(t.name)} · ${tariffPriceLabel(t)}</option>`).join("")}</select></label><label>Nombre del servicio<input name="title" required value="${esc(s.title || db.tariffs[0]?.name || "Atención en domicilio")}"></label></div><p id="tariff-price-info" class="hint" aria-live="polite"></p></div><div class="service-scheduling"><div class="form-section-title"><span>02</span><div><h2>Fecha y organización</h2><p>Se comprueba la disponibilidad y que no coincidan los horarios.</p></div></div><div class="form-grid three"><label>Fecha<input type="date" name="date" required value="${esc(s.date || (area === "Coordinación" ? coordinationDate : focusDate))}"></label><label>Desde<input type="time" name="start" required value="${esc(s.start || "09:00")}"></label><label>Hasta<input type="time" name="end" required value="${esc(s.end || "")}"></label></div><div class="end-time-help"><p id="end-time-info" class="hint" aria-live="polite"></p><button type="button" class="text" data-action="auto-end">Usar hora de fin automática</button></div><label>Persona asignada<select name="worker_id"><option value="">Pendiente de asignación</option>${db.workers.map((w) => `<option value="${w.id}" ${sel === w.id ? "selected" : ""}>${esc(w.name)} · ${esc(workerCities(w).join(", "))}</option>`).join("")}</select></label><div id="assignment-info" aria-live="polite"></div><section class="availability-guide" aria-label="Explorar disponibilidad"><h3>Buscar otra fecha para esta franja</h3><p class="hint">Los recuentos corresponden al horario Desde–Hasta elegido.</p><div id="availability-dates"></div></section></div><div class="service-billing"><div class="form-grid"><label>Importe total (€)<input name="amount" type="number" min="0" step="0.01" required value="${s.amount ?? (store.mode === "demo" ? 36 : 0)}"></label><label>Estado<select name="status">${statuses.map((t) => `<option ${t === (s.status || "pendiente") ? "selected" : ""}>${t}</option>`).join("")}</select></label></div><label>Método de pago<select name="payment_method"><option value="">Sin indicar</option>${[...new Set([...paymentMethods().filter((m) => m.enabled).map((m) => m.name), ...(s.payment_method ? [s.payment_method] : [])])].map((name) => `<option value="${esc(name)}" ${s.payment_method === name ? "selected" : ""}>${esc(name)}</option>`).join("")}</select></label><label>Indicaciones para la visita<textarea name="notes" rows="3">${esc(s.notes || "")}</textarea></label></div><div class="form-actions"><button type="button" class="secondary" data-action="cancel-form">Cancelar</button><button class="primary">${s.id ? "Guardar cambios" : "Crear servicio"}</button></div><p class="form-error" role="alert"></p></form>`;
+  return `<form id="service-form" class="card form-card" data-end-mode="${s.id ? "manual" : "auto"}"><input type="hidden" name="id" value="${esc(s.id || "")}"><div class="service-customer"><div class="form-section-title"><span>01</span><div><h2>Cliente y atención</h2><p>Busca un cliente existente por su nombre o teléfono.</p></div></div><div class="client-picker"><label for="client-search">Cliente</label><input id="client-search" placeholder="Escribe un nombre o teléfono" autocomplete="off" required role="combobox" aria-autocomplete="list" aria-controls="client-results" aria-describedby="client-info" aria-expanded="false" value="${esc(c.name || "")}"><input type="hidden" name="client_id" value="${esc(s.client_id || "")}"><div id="client-results" role="listbox" aria-label="Clientes coincidentes" hidden></div></div><p class="hint" id="client-info">${esc(c.address || "Selecciona un cliente para consultar su dirección.")}</p><div class="form-grid"><label>Tipo de servicio<select name="tariff" id="tariff-select"><option value="" ${!tariff ? "selected" : ""}>Personalizado</option>${db.tariffs.map((t) => `<option value="${t.id}" ${tariff?.id === t.id ? "selected" : ""}>${esc(t.name)} · ${tariffPriceLabel(t)}</option>`).join("")}</select></label><label>Nombre del servicio<input name="title" required value="${esc(s.title || db.tariffs[0]?.name || "Atención en domicilio")}"></label></div><p id="tariff-price-info" class="hint" aria-live="polite"></p></div><div class="service-scheduling"><div class="form-section-title"><span>02</span><div><h2>Fecha y organización</h2><p>Se comprueba la disponibilidad y que no coincidan los horarios.</p></div></div><div class="form-grid three"><label>Fecha<input type="date" name="date" required value="${esc(s.date || (area === "Coordinación" ? coordinationDate : focusDate))}"></label><label>Desde<input type="time" name="start" required value="${esc(s.start || "09:00")}"></label><label>Hasta<input type="time" name="end" required value="${esc(s.end || "")}"></label></div><div class="end-time-help"><p id="end-time-info" class="hint" aria-live="polite"></p><button type="button" class="text" data-action="auto-end">Usar hora de fin automática</button></div><label>Persona asignada<select name="worker_id"><option value="">Pendiente de asignación</option>${db.workers.map((w) => `<option value="${w.id}" ${sel === w.id ? "selected" : ""}>${esc(w.name)} · ${esc(workerCities(w).join(", "))}</option>`).join("")}</select></label><div id="assignment-info" aria-live="polite"></div><section class="availability-guide" aria-label="Explorar disponibilidad"><h3>Buscar otra fecha para esta franja</h3><p class="hint">Los recuentos corresponden al horario Desde–Hasta elegido.</p><div id="availability-dates"></div></section></div><div class="service-billing"><div class="form-grid"><label>Importe total (€)<input name="amount" type="number" min="0" step="0.01" required value="${s.amount ?? (store.mode === "demo" ? 36 : 0)}"></label><label>Estado<select name="status">${statuses.map((t) => `<option ${t === (s.status || "pendiente") ? "selected" : ""}>${t}</option>`).join("")}</select></label></div><label>Método de pago<select name="payment_method"><option value="">Sin indicar</option>${[...new Set([...paymentMethods().filter((m) => m.enabled).map((m) => m.name), ...(s.payment_method ? [s.payment_method] : [])])].map((name) => `<option value="${esc(name)}" ${s.payment_method === name ? "selected" : ""}>${esc(name)}</option>`).join("")}</select></label><label>Indicaciones para la visita<textarea name="notes" rows="3">${esc(s.notes || "")}</textarea></label></div><div class="form-actions"><button type="button" class="secondary" data-action="cancel-form">${s.id ? "Volver sin guardar" : "Cancelar"}</button>${cancelServiceButton(s)}<button class="primary">${s.id ? "Guardar cambios" : "Crear servicio"}</button></div><p class="form-error" role="alert"></p></form>`;
 }
 function calendar(coord) {
   const target = coord ? workerFilter : mine()?.id;
@@ -6612,9 +6631,9 @@ function calendar(coord) {
   const weekStart = coordinationWeekStart || mondayOfWeek(anchor);
   const verticalWeek = mode === "week" && !coordinationWeekHorizontal;
   const canMark = !!target && (user.role === "admin" || target === mine()?.id);
-  const list = coord
+  const list = (coord
     ? db.services.filter((s) => !target || s.worker_id === target)
-    : myServices();
+    : myServices()).filter((s) => s.status !== "cancelado");
   const [year, m] = shownMonth.split("-").map(Number),
     first = new Date(year, m - 1, 1),
     offset = (first.getDay() + 6) % 7,
@@ -6639,9 +6658,7 @@ function calendar(coord) {
         : Array.from({ length: 7 }, (_, i) => shiftedDate(anchor, i - 3));
   for (const date of visibleDates) {
     const d = Number(date.slice(-2));
-    const items = list.filter(
-      (s) => serviceOnDate(s, date) && s.status !== "cancelado",
-    );
+    const items = list.filter((s) => serviceOnDate(s, date));
     const counts = calendarServiceCounts(items);
     const dayState =
       !coord && !target
@@ -6649,6 +6666,7 @@ function calendar(coord) {
         : dailyTeamState(db, date, target);
     const partial = coord && !target && dayState.state === "partial";
     const blocked = dayState.state === "total";
+    const available = dayState.state === "none" && !items.length;
     const hasBlocking = partial || blocked;
     const blockedText =
       coord && !target
@@ -6675,7 +6693,7 @@ function calendar(coord) {
     ]
       .filter(Boolean)
       .join(", ");
-    const dayCell = `<button class="cal-day ${date === today() ? "today" : ""} ${date === anchor ? "focused" : ""} ${marks.has(date) ? "selected" : ""} ${blocked ? "blocked" : ""} ${partial ? "partial-availability" : ""} ${items.length ? "has-services" : ""} ${counts.unassigned ? "needs-assignment" : ""}" data-date="${date}" aria-label="${dateLabel(date)}${serviceLabels ? ", " + serviceLabels : ", sin servicios"}${hasBlocking ? ", " + blockedText : ""}${marks.has(date) ? ", marcado para actuar" : ""}" aria-pressed="${date === anchor}"><span class="day-number">${mode === "day" ? `<span class="strip-weekday">${new Date(date + "T12:00:00").toLocaleDateString("es-ES", { weekday: "short" })}</span><span class="strip-day">${d}</span>` : coord && mode !== "month" ? new Date(date + "T12:00:00").toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short" }) : d}</span>${counts.unassigned ? `<small class="calendar-count unassigned-count" title="${counts.unassigned} sin asignar"><span class="count-long">⚠ ${counts.unassigned} sin asignar</span><span class="count-short" aria-hidden="true">⚠ ${counts.unassigned}<span>sin asig.</span></span></small>` : ""}${counts.assigned ? `<small class="calendar-count assigned-count" title="${counts.assigned} asignados"><span class="count-long">✓ ${counts.assigned} ${counts.assigned === 1 ? "asignado" : "asignados"}</span><span class="count-short" aria-hidden="true">✓ ${counts.assigned}<span>asig.</span></span></small>` : ""}${counts.finished ? `<small class="calendar-count finished-count"><span class="count-long">${counts.finished} finalizado${counts.finished === 1 ? "" : "s"}</span><span class="count-short" aria-hidden="true">${counts.finished}<span>finaliz.</span></span></small>` : ""}${hasBlocking ? `<small class="unavailable-label ${partial ? "partial-label" : ""}" title="${blockedText}"><span class="count-long">${coord && !target ? (partial ? "Parcial" : "Total") + " · " + dayState.blocked + "/" + dayState.total + " no disp." : blockedText}</span><span class="count-short" aria-hidden="true">${coord && !target ? dayState.blocked + "/" + dayState.total : ""}<span>${partial ? "Parcial" : "No disp."}</span></span></small>` : ""}${marks.has(date) ? '<small class="marked-label">✓ Marcado</small>' : ""}</button>`;
+    const dayCell = `<button class="cal-day ${date === today() ? "today" : ""} ${date === anchor ? "focused" : ""} ${marks.has(date) ? "selected" : ""} ${blocked ? "blocked" : ""} ${available ? "day-available" : ""} ${partial ? "partial-availability" : ""} ${items.length ? "has-services" : ""} ${counts.unassigned ? "needs-assignment" : ""}" data-date="${date}" aria-label="${dateLabel(date)}${serviceLabels ? ", " + serviceLabels : ", sin servicios"}${hasBlocking ? ", " + blockedText : available ? ", disponible" : ""}${marks.has(date) ? ", marcado para actuar" : ""}" aria-pressed="${date === anchor}"><span class="day-number">${mode === "day" ? `<span class="strip-weekday">${new Date(date + "T12:00:00").toLocaleDateString("es-ES", { weekday: "short" })}</span><span class="strip-day">${d}</span>` : coord && mode !== "month" ? new Date(date + "T12:00:00").toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short" }) : d}</span>${counts.unassigned ? `<small class="calendar-count unassigned-count" title="${counts.unassigned} sin asignar"><span class="count-long">⚠ ${counts.unassigned} sin asignar</span><span class="count-short" aria-hidden="true">⚠ ${counts.unassigned}<span>sin asig.</span></span></small>` : ""}${counts.assigned ? `<small class="calendar-count assigned-count" title="${counts.assigned} asignados"><span class="count-long">✓ ${counts.assigned} ${counts.assigned === 1 ? "asignado" : "asignados"}</span><span class="count-short" aria-hidden="true">✓ ${counts.assigned}<span>asig.</span></span></small>` : ""}${counts.finished ? `<small class="calendar-count finished-count"><span class="count-long">${counts.finished} finalizado${counts.finished === 1 ? "" : "s"}</span><span class="count-short" aria-hidden="true">${counts.finished}<span>finaliz.</span></span></small>` : ""}${hasBlocking ? `<small class="unavailable-label ${partial ? "partial-label" : ""}" title="${blockedText}"><span class="count-long">${coord && !target ? (partial ? "Parcial" : "Total") + " · " + dayState.blocked + "/" + dayState.total + " no disp." : blockedText}</span><span class="count-short" aria-hidden="true">${coord && !target ? dayState.blocked + "/" + dayState.total : ""}<span>${partial ? "Parcial" : "No disp."}</span></span></small>` : ""}${marks.has(date) ? '<small class="marked-label">✓ Marcado</small>' : ""}</button>`;
     cells +=
       mode === "day"
         ? dayCell
@@ -6732,7 +6750,7 @@ function calendar(coord) {
           .map(([short, full]) => `<span aria-label="${full}">${short}</span>`)
           .join("")}</div>`
       : ""
-  }${mode === "week" ? `<div class="planning-week-controls"><button type="button" class="secondary" data-action="planning-week-layout">${verticalWeek ? "Ver horas en horizontal" : "Ver horas en vertical"}</button><p class="hint">Desliza arriba o abajo sobre las fechas o usa la rueda para pasar los días.</p></div>` : ""}${mode === "month" ? `<div class="calendar-grid">${cells}</div>` : verticalWeek ? `<div class="hourly-calendar" tabindex="0" role="region" aria-label="Semana de 24 horas"><div class="planning-week-grid">${cells}</div></div>` : mode === "day" ? `<div class="planning-date-strip" role="group" aria-label="Elegir día de planificación">${cells}</div>${planningDayHours(list, anchor)}` : hourlyCalendar(cells)}<div class="calendar-legend"><span class="legend-unassigned">⚠ Sin asignar: necesita una persona</span><span>✓ Asignados: con persona</span>${coord && !target ? '<span><i class="dot partial-dot"></i> Parcial: parte del equipo bloqueada</span><span><i class="dot coral"></i> No disp.: todo el equipo bloqueado</span>' : '<span><i class="dot coral"></i> No disp. = no disponible</span>'}<span><i class="dot focus-dot"></i> Día consultado</span><span><i class="dot pale"></i> Marcado para actuar</span></div>${coord && !target && dailyTeamState(db, anchor).state === "empty" ? '<p class="hint">No hay personas activas en el equipo. No se indica disponibilidad.</p>' : ""}${canMark ? `<div class="availability-bar"><p aria-live="polite"><b>${marks.size} días marcados para actuar</b><small>Un clic consulta el día. Doble clic lo marca o desmarca; después aplica la disponibilidad.</small></p>${btn(marks.has(anchor) ? "Desmarcar día consultado" : "Marcar día consultado", "toggle-focused-day", `aria-pressed="${marks.has(anchor)}"`, "secondary")}${btn("Limpiar marcas", "clear-marked-days", "", "text")}${btn("No disponible", "block-days", "", "secondary")}${btn("Disponible", "free-days", "", "text")}${store.mode === "cloud" ? btn("Horas no disponibles", "hour-blocks", 'type="button"', "secondary") : ""}</div>` : '<p class="hint calendar-hint" title="Los colores representan bloqueos diarios del equipo activo; los horarios concretos se comprueban al asignar un servicio.">Selecciona una persona para cambiar bloqueos diarios. La franja se valida al asignar.</p>'}</section><section class="card daily"><span class="eyebrow">${dateLabel(anchor)}</span><h2>${coord && mode === "day" ? "Disponibilidad del día" : "Servicios del día"}</h2>${coord && mode === "day" ? "" : daily.length ? daily.map(serviceRow).join("") : empty("Día sin servicios.")}${coord ? btn("+ Crear este día", "create-service", "", "secondary full") : ""}${
+  }${mode === "week" ? `<div class="planning-week-controls"><button type="button" class="secondary" data-action="planning-week-layout">${verticalWeek ? "Ver horas en horizontal" : "Ver horas en vertical"}</button><p class="hint">Desliza arriba o abajo sobre las fechas o usa la rueda para pasar los días.</p></div>` : ""}${mode === "month" ? `<div class="calendar-grid">${cells}</div>` : verticalWeek ? `<div class="hourly-calendar" tabindex="0" role="region" aria-label="Semana de 24 horas"><div class="planning-week-grid">${cells}</div></div>` : mode === "day" ? `<div class="planning-date-strip" role="group" aria-label="Elegir día de planificación">${cells}</div>${planningDayHours(list, anchor)}` : hourlyCalendar(cells)}<div class="calendar-legend"><span><i class="dot available-dot"></i> Disponible</span><span class="legend-unassigned">⚠ Sin asignar: necesita una persona</span><span>✓ Asignados: con persona</span>${coord && !target ? '<span><i class="dot partial-dot"></i> Parcial: parte del equipo bloqueada</span><span><i class="dot coral"></i> No disp.: todo el equipo bloqueado</span>' : '<span><i class="dot coral"></i> No disp. = no disponible</span>'}<span><i class="dot focus-dot"></i> Día consultado</span><span><i class="dot pale"></i> Marcado para actuar</span></div>${coord && !target && dailyTeamState(db, anchor).state === "empty" ? '<p class="hint">No hay personas activas en el equipo. No se indica disponibilidad.</p>' : ""}${canMark ? `<div class="availability-bar"><p aria-live="polite"><b>${marks.size} días marcados para actuar</b><small>Un clic consulta el día. Doble clic lo marca o desmarca; después aplica la disponibilidad.</small></p>${btn(marks.has(anchor) ? "Desmarcar día consultado" : "Marcar día consultado", "toggle-focused-day", `aria-pressed="${marks.has(anchor)}"`, "secondary")}${btn("Limpiar marcas", "clear-marked-days", "", "text")}${btn("No disponible", "block-days", "", "secondary")}${btn("Disponible", "free-days", "", "text")}${store.mode === "cloud" ? btn("Horas no disponibles", "hour-blocks", 'type="button"', "secondary") : ""}</div>` : '<p class="hint calendar-hint" title="Los colores representan bloqueos diarios del equipo activo; los horarios concretos se comprueban al asignar un servicio.">Selecciona una persona para cambiar bloqueos diarios. La franja se valida al asignar.</p>'}</section><section class="card daily"><span class="eyebrow">${dateLabel(anchor)}</span><h2>${coord && mode === "day" ? "Disponibilidad del día" : "Servicios del día"}</h2>${coord && mode === "day" ? "" : daily.length ? daily.map(serviceRow).join("") : empty("Día sin servicios.")}${coord ? btn("+ Crear este día", "create-service", "", "secondary full") : ""}${
     coord
       ? `<h3 class="availability-title">Disponibilidad del equipo</h3>${db.workers
           .filter((w) => !target || w.id === target)
@@ -7102,7 +7120,7 @@ function detail(id) {
     w = worker(s.worker_id);
   dialog(
     "Detalle del servicio",
-    `<div class="service-detail">${badge(s.status)}<h3>${esc(s.title)}</h3><h2>${esc(c.name)}</h2><p>${dateLabel(s.date)} · ${serviceTimes(s)}</p><div class="detail-box"><b>Dirección</b><p>${esc(c.address)}</p><a href="tel:${esc(c.phone?.replace(/[^+\d]/g, ""))}">${esc(c.phone)}</a></div><p><b>Persona asignada</b><br>${esc(w.name || "Pendiente de asignación")}</p><p><b>Indicaciones</b><br>${esc(s.notes || "Sin indicaciones adicionales.")}</p><p>${esc(c.notes)}</p>${user.role === "admin" ? `<p><b>Importe:</b> ${euro(s.amount)} · ${s.paid ? "Cobrado" : "Pendiente de cobro"}<br><b>Método:</b> ${esc(s.payment_method || "Sin indicar")}</p>${btn("Editar / asignar servicio", "edit-service", `data-id="${id}"`)}${s.status !== "cancelado" ? btn("Cancelar servicio", "cancel-service", `data-id="${id}"`, "text danger") : ""}` : ""}</div>`,
+    `<div class="service-detail">${badge(s.status)}<h3>${esc(s.title)}</h3><h2>${esc(c.name)}</h2><p>${dateLabel(s.date)} · ${serviceTimes(s)}</p><div class="detail-box"><b>Dirección</b><p>${esc(c.address)}</p><a href="tel:${esc(c.phone?.replace(/[^+\d]/g, ""))}">${esc(c.phone)}</a></div><p><b>Persona asignada</b><br>${esc(w.name || "Pendiente de asignación")}</p><p><b>Indicaciones</b><br>${esc(s.notes || "Sin indicaciones adicionales.")}</p><p>${esc(c.notes)}</p>${user.role === "admin" ? `<p><b>Importe:</b> ${euro(s.amount)} · ${s.paid ? "Cobrado" : "Pendiente de cobro"}<br><b>Método:</b> ${esc(s.payment_method || "Sin indicar")}</p>${btn("Editar / asignar servicio", "edit-service", `data-id="${id}"`)}${cancelServiceButton(s)}` : ""}</div>`,
   );
 }
 function go(p, slot = null) {
@@ -7587,21 +7605,23 @@ document.addEventListener("click", (e) => {
         break;
       case "cancel-service": {
         const s = db.services.find((s) => s.id === t.dataset.id);
+        if (!canCancelService(s)) break;
         dialog(
           "Cancelar servicio",
-          `<p>Se conservará el registro de ${esc(client(s).name)} como cancelado y se excluirá de cobros.</p><div class="form-actions">${btn("Volver", "close-dialog", "", "secondary")}${btn("Confirmar cancelación", "confirm-cancel", `data-id="${s.id}"`)}</div>`,
+          `<p>Se cancelará el servicio de ${esc(client(s).name)} del ${dateLabel(s.date)} a las ${esc(s.start)}. Figurará como cancelado y quedará fuera de los cobros.</p><div class="form-actions">${btn("Volver", "close-dialog", "", "secondary")}${btn("Confirmar cancelación", "confirm-cancel", `data-id="${s.id}"`)}</div>`,
         );
         break;
       }
-      case "confirm-cancel":
-        await store.service({
-          ...db.services.find((s) => s.id === t.dataset.id),
-          status: "cancelado",
-        });
+      case "confirm-cancel": {
+        const service = db.services.find((s) => s.id === t.dataset.id);
+        if (!canCancelService(service)) break;
+        await store.service({ ...service, status: "cancelado" });
         $("dialog")?.close();
+        if (page === "Crear servicios") page = "Servicios";
         await refresh();
         toast("Servicio cancelado.");
         break;
+      }
       case "services-view-mode":
         if (!["day", "week", "month"].includes(t.dataset.view)) break;
         servicesViewMode = t.dataset.view;

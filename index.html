@@ -7,7 +7,7 @@
     <link rel="manifest" href="umec-v2.webmanifest?v=503">
     <link rel="icon" type="image/png" sizes="32x32" href="umec-v2-icon-32.png">
     <link rel="apple-touch-icon" sizes="192x192" href="umec-v2-icon-192.png">
-    <title>UMEC Gestión · UMEC V2 v5.0.17</title>
+    <title>UMEC Gestión · UMEC V2 v5.0.23</title>
     <style>:root {
   --accent: #155b69;
   --ink: #203c44;
@@ -4764,6 +4764,61 @@ button.cal-day[data-date].has-services .calendar-count.assigned-count {
 <style>
 .sidebar .nav-label-short { display: none; }
 </style>
+<style>
+.service-maps { display:inline-flex; align-items:center; gap:6px; }
+.service-maps svg { flex:none; }
+</style>
+<style>
+.timeline-event.timeline-running, .cal-day .calendar-running, .services-month-day .calendar-running {
+  background: var(--cal-pending);
+  color: var(--cal-pending-ink);
+  border-color: var(--cal-pending-line);
+}
+.cal-day .calendar-running, .services-month-day .calendar-running {
+  grid-column: 1 / -1;
+  border: 1px solid var(--cal-pending-line);
+  border-radius: 4px;
+  padding: 1px 3px;
+}
+.planning-month-mode .cal-day .calendar-running { font-size: 10px; }
+.planning-month-mode .cal-day .finished-count { grid-column: 1 / -1; }
+</style>
+<style>
+.timeline-event.timeline-running, .cal-day .calendar-running, .services-month-day .calendar-running, .badge.en-curso {
+  background: var(--cal-partial-badge); color: var(--cal-partial-ink); border-color: var(--cal-partial-line);
+}
+.cal-day .calendar-running, .services-month-day .calendar-running { border-color: var(--cal-partial-line); }
+.badge-icon { margin-inline-end: .3em; }
+.planning-date-strip .cal-day:not(.focused) > .calendar-running { display: block; }
+.sidebar .nav-label:has(.my-agenda-word) { display: inline-grid; justify-items: center; line-height: 1.05; }
+.sidebar .nav-item.current[data-page="Agenda"] { text-decoration: none; }
+.sidebar .nav-item.current[data-page="Agenda"] .my-agenda-title { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.my-agenda-word { display: block; padding: 0 2px; line-height: 1; }
+.my-agenda-ink {
+  display: block;
+  padding-inline: .12em;
+  font-family: "Segoe Script", "Snell Roundhand", "Bradley Hand", cursive;
+  font-size: 1.24em;
+  font-style: italic;
+  font-weight: 700;
+  color: #017f67;
+}
+@supports (background-clip: text) {
+  .my-agenda-ink {
+    background: linear-gradient(158deg, #bf6159 0 54%, #017f67 60% 100%);
+    background-clip: text;
+    color: transparent;
+  }
+}
+@media (max-width: 800px) {
+  .shell > .sidebar .nav-item:has(.my-agenda-word) { gap: 2px; }
+  .shell > .sidebar .nav-label:has(.my-agenda-word) { display: grid; }
+  :root[data-skin="petrol"] .nav-item:not(.current) .my-agenda-word { background:#f6fff9; border-radius:3px; }
+}
+:root[data-mode="dark"] .my-agenda-word { background:#f6fff9; border-radius:3px; }
+.report-index-option { display:inline-flex; flex-direction:row; align-items:center; gap:6px; }
+.report-index-option input { width:auto; }
+</style>
 </head>
   <body>
     <div id="app"></div>
@@ -5182,8 +5237,9 @@ function calendarServiceCounts(services) {
   const visible = services.filter((s) => s.status !== "cancelado");
   return {
     unassigned: visible.filter((s) => !s.worker_id && active(s)).length,
-    assigned: visible.filter((s) => !!s.worker_id).length,
-    finished: visible.filter((s) => !s.worker_id && !active(s)).length,
+    assigned: visible.filter((s) => !!s.worker_id && active(s) && s.status !== "en curso").length,
+    running: visible.filter((s) => s.status === "en curso").length,
+    finished: visible.filter((s) => s.status === "completado").length,
   };
 }
 
@@ -5256,6 +5312,8 @@ class DemoStore {
       if (!worker.phone?.trim()) worker.phone = contact[0];
       if (!worker.email?.trim()) worker.email = contact[1] + "@umec.example";
     }
+    let number = this.db.workers.reduce((max, worker) => Math.max(max, Number(worker.employee_number) || 0), 0);
+    for (const worker of this.db.workers) if (!worker.employee_number) worker.employee_number = ++number;
     this.save();
   }
   save() {
@@ -5277,6 +5335,10 @@ class DemoStore {
     assertAdmin(this.user);
     if (!["clients", "workers", "tariffs"].includes(table))
       throw Error("Acción no válida.");
+    if (table === "workers" && item.employee_number == null) {
+      const last = this.db.workers.reduce((max, worker) => Math.max(max, Number(worker.employee_number) || 0), 0);
+      item = { ...item, employee_number: last + 1 };
+    }
     const i = this.db[table].findIndex((x) => x.id === item.id);
     if (i < 0) this.db[table].push(item);
     else this.db[table][i] = item;
@@ -5435,7 +5497,10 @@ class CloudStore {
     );
   }
   async service(s) {
-    return this.put("services", s);
+    const entry = { ...s };
+    delete entry.actual_started_at;
+    delete entry.actual_finished_at;
+    return this.put("services", entry);
   }
   async put(table, item) {
     if (!["clients", "workers", "services", "tariffs"].includes(table))
@@ -5940,8 +6005,14 @@ const client = (s) => db.clients.find((c) => c.id === s.client_id) || {},
   worker = (id) => db.workers.find((w) => w.id === id) || {},
   mine = () => db.workers.find((w) => w.user_id === user.id);
 const myServices = () => db.services.filter((s) => s.worker_id === mine()?.id);
-const badge = (s) =>
-  `<span class="badge ${esc(s.replaceAll(" ", "-"))}">${esc(s)}</span>`;
+const statusBadges = {
+  pendiente: ["◷", "Pendiente"], asignado: ["✓", "Asignado"], "en curso": ["▶", "En curso"],
+  completado: ["✓", "Finalizado"], incidencia: ["!", "Incidencia"], cancelado: ["×", "Cancelado"],
+};
+const badge = (s) => {
+  const [icon, label] = statusBadges[s] || ["", s];
+  return `<span class="badge ${esc(s.replaceAll(" ", "-"))}">${icon ? `<span class="badge-icon" aria-hidden="true">${icon}</span>` : ""}${esc(label)}</span>`;
+};
 const btn = (label, action, extra = "", cls = "primary") =>
   `<button class="${cls}" data-action="${action}" ${extra}>${label}</button>`;
 let noticeAudio;
@@ -6272,7 +6343,7 @@ function render() {
   ];
   const currentTab = ["Empleados", "Cobros"].includes(page) ? page : area;
   $("#app").innerHTML =
-    `<div class="shell ${teamArea ? "team-area" : ""} ${menuCollapsed ? "menu-collapsed" : ""}">${teamArea ? "" : `<aside class="sidebar" id="main-menu"><a class="brand" href="#" data-action="home"><img src="${currentAppLogo()}" alt="UMEC Gestión"><span>UNA MANO EN CASA</span></a><p class="nav-caption">${area === "Coordinación" ? "ORGANIZAR EL EQUIPO" : "MI ESPACIO"}</p><nav aria-label="Menú principal">${nav.filter((n) => user.role !== "admin" || menuModuleEnabled(n)).map((n) => `<button data-page="${n}" class="nav-item ${n === page ? "current" : ""}" aria-label="${n}" title="${n}"><span aria-hidden="true">${icons[n]}</span><span class="nav-label">${n === "Crear servicios" ? '<span class="nav-label-full">Crear servicios</span><span class="nav-label-short" aria-hidden="true">Crear</span>' : n}</span></button>`).join("")}</nav><button type="button" class="menu-toggle secondary" data-action="toggle-menu" aria-label="${menuCollapsed ? "Expandir menú" : "Recoger menú"}" title="${menuCollapsed ? "Expandir menú" : "Recoger menú"}" aria-expanded="${!menuCollapsed}" aria-controls="main-menu"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 6 8 12l6 6"/></svg></button></aside>`}<div class="workspace"><header class="topbar"><div class="topbar-navigation"><img class="team-logo ${teamArea ? "" : "mobile-header-logo"}" src="${currentAppLogo()}" alt="UMEC Gestión"><div class="area-tabs" role="group" aria-label="Área de trabajo">${topTabs.map((a) => `<button data-area="${a}" class="${currentTab === a ? "active" : ""}" aria-current="${currentTab === a ? "page" : "false"}">${a}</button>`).join("")}</div></div>${accountMenu()}</header><div class="mode-banner ${store.mode === "cloud" ? "cloud" : ""}"><span>${store.mode === "demo" ? "◉ DEMOSTRACIÓN · Datos ficticios guardados en este navegador" : "● CONECTADO · Cuenta única de UMEC"} </span>${store.mode === "demo" ? '<button data-action="logout">Salir de la demo</button>' : user.role === "admin" ? btn("Reservas web", "web-bookings", 'type="button"', "secondary") + btn("Solicitudes de acceso", "employee-requests", 'type="button"', "secondary") : ""}</div><main id="content" class="${page === "Planificación" ? "planning-page" : ""}"><div class="page-heading ${page === "Inicio" ? "home-heading" : ""}"><div><span class="eyebrow">${area === "Coordinación" ? "COORDINACIÓN DEL EQUIPO" : "UMEC GESTIÓN"}</span><h1 class="${page === "Inicio" ? "sr-only" : ""}">${page === "Inicio" ? "Resumen general" : page}</h1><p>${subtitle()}</p></div>${user.role === "admin" && page === "Planificación" ? `<div class="planning-header-actions">${btn("+ Crear servicio", "create-service")}${menuModuleEnabled("Clientes") ? `<div class="planning-client-actions">${btn(icons.Clientes + "<span>Clientes</span>", "coord-clients", "", "secondary")}${btn("+ Añadir cliente", "new-client", "", "secondary")}</div>` : ""}</div>` : user.role === "admin" && page === "Clientes" && area === "Coordinación" ? btn("Volver a Planificación", "coord", "", "secondary") : user.role === "admin" && page === "Cobros" ? btn('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6M6 17H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M6 14h12v7H6zM17 12h2"/></svg><span>Ver informe</span>', "view-payment-report", "", "secondary payment-report-button") : user.role === "admin" && ["Inicio", "Servicios"].includes(page) ? btn("+ Crear servicio", "create-service") : ""}</div>${body()}</main><footer>Una mano en casa <span>·</span> Gestión cercana, cada día.</footer></div></div>`;
+    `<div class="shell ${teamArea ? "team-area" : ""} ${menuCollapsed ? "menu-collapsed" : ""}">${teamArea ? "" : `<aside class="sidebar" id="main-menu"><a class="brand" href="#" data-action="home"><img src="${currentAppLogo()}" alt="UMEC Gestión"><span>UNA MANO EN CASA</span></a><p class="nav-caption">${area === "Coordinación" ? "ORGANIZAR EL EQUIPO" : "MI ESPACIO"}</p><nav aria-label="Menú principal">${nav.filter((n) => user.role !== "admin" || menuModuleEnabled(n)).map((n) => `<button data-page="${n}" class="nav-item ${n === page ? "current" : ""}" aria-label="${n === "Agenda" ? "Mi Agenda" : n}" title="${n === "Agenda" ? "Mi Agenda" : n}"><span aria-hidden="true">${icons[n]}</span><span class="nav-label">${n === "Crear servicios" ? '<span class="nav-label-full">Crear servicios</span><span class="nav-label-short" aria-hidden="true">Crear</span>' : n === "Agenda" ? '<span class="my-agenda-word" aria-hidden="true"><span class="my-agenda-ink">Mi</span></span><span class="my-agenda-title">Agenda</span>' : n}</span></button>`).join("")}</nav><button type="button" class="menu-toggle secondary" data-action="toggle-menu" aria-label="${menuCollapsed ? "Expandir menú" : "Recoger menú"}" title="${menuCollapsed ? "Expandir menú" : "Recoger menú"}" aria-expanded="${!menuCollapsed}" aria-controls="main-menu"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 6 8 12l6 6"/></svg></button></aside>`}<div class="workspace"><header class="topbar"><div class="topbar-navigation"><img class="team-logo ${teamArea ? "" : "mobile-header-logo"}" src="${currentAppLogo()}" alt="UMEC Gestión"><div class="area-tabs" role="group" aria-label="Área de trabajo">${topTabs.map((a) => `<button data-area="${a}" class="${currentTab === a ? "active" : ""}" aria-current="${currentTab === a ? "page" : "false"}">${a}</button>`).join("")}</div></div>${accountMenu()}</header><div class="mode-banner ${store.mode === "cloud" ? "cloud" : ""}"><span>${store.mode === "demo" ? "◉ DEMOSTRACIÓN · Datos ficticios guardados en este navegador" : "● CONECTADO · Cuenta única de UMEC"} </span>${store.mode === "demo" ? '<button data-action="logout">Salir de la demo</button>' : user.role === "admin" ? btn("Reservas web", "web-bookings", 'type="button"', "secondary") + btn("Solicitudes de acceso", "employee-requests", 'type="button"', "secondary") : ""}</div><main id="content" class="${page === "Planificación" ? "planning-page" : ""}"><div class="page-heading ${page === "Inicio" ? "home-heading" : ""}"><div><span class="eyebrow">${area === "Coordinación" ? "COORDINACIÓN DEL EQUIPO" : "UMEC GESTIÓN"}</span><h1 class="${page === "Inicio" ? "sr-only" : ""}">${page === "Inicio" ? "Resumen general" : page}</h1><p>${subtitle()}</p></div>${user.role === "admin" && page === "Planificación" ? `<div class="planning-header-actions">${btn("+ Crear servicio", "create-service")}${menuModuleEnabled("Clientes") ? `<div class="planning-client-actions">${btn(icons.Clientes + "<span>Clientes</span>", "coord-clients", "", "secondary")}${btn("+ Añadir cliente", "new-client", "", "secondary")}</div>` : ""}</div>` : user.role === "admin" && page === "Clientes" && area === "Coordinación" ? btn("Volver a Planificación", "coord", "", "secondary") : user.role === "admin" && page === "Cobros" ? btn('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6M6 17H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M6 14h12v7H6zM17 12h2"/></svg><span>Ver informe</span>', "view-payment-report", "", "secondary payment-report-button") : user.role === "admin" && ["Inicio", "Servicios"].includes(page) ? btn("+ Crear servicio", "create-service") : ""}</div>${body()}</main><footer>Una mano en casa <span>·</span> Gestión cercana, cada día.</footer></div></div>`;
   if (page === "Crear servicios" && editingServiceId && user.role === "admin") {
     const editing = db.services.find((service) => service.id === editingServiceId);
     if (editing) $("#content .form-card").outerHTML = serviceForm(editing);
@@ -6439,7 +6510,7 @@ function dashboard() {
 function serviceRow(s) {
   const c = client(s),
     w = worker(s.worker_id);
-  return `<button class="service-row" data-service="${s.id}"><span class="time">${esc(s.start)}<small>${esc(s.end)}${overnight(s) ? " (+1 día)" : ""}</small></span><span class="service-main"><b>${esc(c.name)}</b><span>${esc(s.title)}</span><small>${esc(c.zone)} · ${esc(w.name || "Sin asignar")}</small></span>${badge(s.status)}<span class="chevron">›</span></button>`;
+  return `<button class="service-row" data-service="${s.id}"><span class="time">${esc(s.start)}<small>${esc(s.end)}${overnight(s) ? " (+1 día)" : ""}</small></span><span class="service-main"><b>${esc(c.name)}</b><span>${esc(s.title)}</span><small>${esc(c.zone)} · ${esc(w.name || "Sin asignar")}</small>${serviceActualTimes(s) ? `<small>${esc(serviceActualTimes(s))}</small>` : ""}</span>${badge(s.status)}<span class="chevron">›</span></button>`;
 }
 function searchInput(placeholder) {
   return `<label class="search"><span aria-hidden="true">⌕</span><input id="search" value="${esc(query)}" placeholder="${placeholder}" aria-label="${placeholder}"></label>`;
@@ -6474,7 +6545,7 @@ function weeklyServiceCard(s) {
         : s.worker_id
           ? "is-assigned"
           : "is-finished";
-  return `<button type="button" class="service-row weekly-service-card ${state}" data-service="${s.id}"><span class="weekly-service-hours">${serviceTimes(s)}</span><b>${esc(c.name)}</b><span class="weekly-service-title">${esc(s.title)}</span><span class="weekly-service-person">${esc(w.name || "Sin asignar")}</span>${badge(s.status)}</button>`;
+  return `<button type="button" class="service-row weekly-service-card ${state}" data-service="${s.id}"><span class="weekly-service-hours">${serviceTimes(s)}</span><b>${esc(c.name)}</b><span class="weekly-service-title">${esc(s.title)}</span><span class="weekly-service-person">${esc(w.name || "Sin asignar")}</span>${serviceActualTimes(s) ? `<small>${esc(serviceActualTimes(s))}</small>` : ""}${badge(s.status)}</button>`;
 }
 const serviceViewIcons = {
   day: menuIcon(
@@ -6583,12 +6654,14 @@ function serviceTimeline(services, date, {
   const events = slots.map(({ service, start, end, lane }) => {
     const state = service.status === "completado"
       ? "timeline-inactive"
-      : service.worker_id ? "timeline-assigned" : "timeline-pending";
+      : service.status === "en curso" ? "timeline-running"
+        : service.worker_id ? "timeline-assigned" : "timeline-pending";
     const times = timelineTime(start) + "–" + timelineTime(end);
     const person = esc(worker(service.worker_id).name || "Sin asignar");
     const title = esc(client(service).name || service.title);
-    const label = `${times} · ${title} · ${esc(service.title)} · ${person} · ${esc(service.status)}${overnight(service) ? " · Turno completo " + serviceTimes(service) : ""}`;
-    return `<button type="button" class="timeline-event ${state}" data-service="${esc(service.id)}" style="--start:${100 * (start - first) / (last - first)}%;--duration:${100 * (end - start) / (last - first)}%;--lane:${lane}" aria-label="${label}" title="${label}"><strong>${times}</strong><span>${title}</span></button>`;
+    const progress = service.status === "en curso" ? "En curso" : service.status === "completado" ? "Finalizado" : "";
+    const label = `${times} · ${title} · ${esc(service.title)} · ${person} · ${progress || esc(service.status)}${overnight(service) ? " · Turno completo " + serviceTimes(service) : ""}`;
+    return `<button type="button" class="timeline-event ${state}" data-service="${esc(service.id)}" style="--start:${100 * (start - first) / (last - first)}%;--duration:${100 * (end - start) / (last - first)}%;--lane:${lane}" aria-label="${label}" title="${label}">${progress ? `<strong class="timeline-progress"><span aria-hidden="true">${service.status === "en curso" ? "▶" : "✓"}</span> ${progress}</strong><span>${times} · ${title}</span>` : `<strong>${times}</strong><span>${title}</span>`}</button>`;
   }).join("");
   if (vertical) {
     const axis = Array.from({ length: 25 }, (_, i) =>
@@ -6661,17 +6734,18 @@ function serviceMonthCalendar(visible, start, last) {
     const partial = day.state === "partial";
     const free = day.total - day.blocked;
     const availabilityLabel = blocked ? "No disponible" : partial ? free + (free === 1 ? " libre" : " libres") : "";
-    const finished = entries.filter((s) => s.status === "completado").length;
+    const { running, finished } = counts;
     const descriptions = [
       entries.length + " servicios",
       counts.unassigned ? counts.unassigned + " sin asignar" : "",
       counts.assigned ? counts.assigned + " asignados" : "",
       availabilityLabel,
-      finished ? finished + " finalizados" : "",
+      running ? running + " en curso" : "",
+      finished ? finished + (finished === 1 ? " finalizado" : " finalizados") : "",
     ]
       .filter(Boolean)
       .join(", ");
-    cells += `<button type="button" class="services-month-day ${available ? "day-available" : ""} ${blocked ? "blocked" : ""} ${date === servicesDate ? "is-anchor" : ""}" data-action="services-open-day" data-calendar-date="${date}" aria-label="${dateLabel(date)}, ${descriptions}. Abrir día" aria-pressed="${date === servicesDate}"><b>${n}</b>${counts.assigned ? `<small class="services-month-assigned">✓ ${counts.assigned}<span class="services-month-long"> asignado${counts.assigned === 1 ? "" : "s"}</span></small>` : ""}${counts.unassigned ? `<small class="services-month-pending">⚠ ${counts.unassigned}<span class="services-month-long"> sin asignar</span><span class="services-month-short" aria-hidden="true"> sin asig.</span></small>` : ""}${availabilityLabel ? `<small class="services-month-availability ${partial ? "partial-label" : "blocked-label"}">${availabilityLabel}</small>` : ""}${finished ? `<small class="services-month-neutral">${finished}<span class="services-month-long"> finalizado${finished === 1 ? "" : "s"}</span><span class="services-month-short" aria-hidden="true"> fin.</span></small>` : ""}</button>`;
+    cells += `<button type="button" class="services-month-day ${available ? "day-available" : ""} ${blocked ? "blocked" : ""} ${date === servicesDate ? "is-anchor" : ""}" data-action="services-open-day" data-calendar-date="${date}" aria-label="${dateLabel(date)}, ${descriptions}. Abrir día" aria-pressed="${date === servicesDate}"><b>${n}</b>${counts.assigned ? `<small class="services-month-assigned">✓ ${counts.assigned}<span class="services-month-long"> asignado${counts.assigned === 1 ? "" : "s"}</span></small>` : ""}${counts.unassigned ? `<small class="services-month-pending">⚠ ${counts.unassigned}<span class="services-month-long"> sin asignar</span><span class="services-month-short" aria-hidden="true"> sin asig.</span></small>` : ""}${availabilityLabel ? `<small class="services-month-availability ${partial ? "partial-label" : "blocked-label"}">${availabilityLabel}</small>` : ""}${running ? `<small class="calendar-running">${running} en curso</small>` : ""}${finished ? `<small class="services-month-neutral">${finished}<span class="services-month-long"> finalizado${finished === 1 ? "" : "s"}</span><span class="services-month-short" aria-hidden="true"> fin.</span></small>` : ""}</button>`;
   }
   for (let i = (offset + days) % 7; i > 0 && i < 7; i++)
     cells += '<span class="services-month-blank" aria-hidden="true"></span>';
@@ -6759,7 +6833,7 @@ function serviceForm(s = {}) {
   const tariff = s.id
     ? db.tariffs.find((t) => t.name === s.title)
     : db.tariffs[0];
-  return `<form id="service-form" class="card form-card" data-end-mode="${s.id ? "manual" : "auto"}"><input type="hidden" name="id" value="${esc(s.id || "")}"><div class="service-customer"><div class="form-section-title"><span>01</span><div><h2>Cliente y atención</h2><p>Busca un cliente existente por su nombre o teléfono.</p></div></div><div class="client-picker"><label for="client-search">Cliente</label><input id="client-search" placeholder="Escribe un nombre o teléfono" autocomplete="off" required role="combobox" aria-autocomplete="list" aria-controls="client-results" aria-describedby="client-info" aria-expanded="false" value="${esc(c.name || "")}"><input type="hidden" name="client_id" value="${esc(s.client_id || "")}"><div id="client-results" role="listbox" aria-label="Clientes coincidentes" hidden></div></div><p class="hint" id="client-info">${esc(c.address || "Selecciona un cliente para consultar su dirección.")}</p><div class="form-grid"><label>Tipo de servicio<select name="tariff" id="tariff-select"><option value="" ${!tariff ? "selected" : ""}>Personalizado</option>${db.tariffs.map((t) => `<option value="${t.id}" ${tariff?.id === t.id ? "selected" : ""}>${esc(t.name)} · ${tariffPriceLabel(t)}</option>`).join("")}</select></label><label>Nombre del servicio<input name="title" required value="${esc(s.title || db.tariffs[0]?.name || "Atención en domicilio")}"></label></div><p id="tariff-price-info" class="hint" aria-live="polite"></p></div><div class="service-scheduling"><div class="form-section-title"><span>02</span><div><h2>Fecha y organización</h2><p>Se comprueba la disponibilidad y que no coincidan los horarios.</p></div></div><div class="form-grid three"><label>Fecha<input type="date" name="date" required value="${esc(s.date || (area === "Coordinación" ? coordinationDate : focusDate))}"></label><label>Desde<input type="time" name="start" required value="${esc(s.start || "09:00")}"></label><label>Hasta<input type="time" name="end" required value="${esc(s.end || "")}"></label></div><div class="end-time-help"><p id="end-time-info" class="hint" aria-live="polite"></p><button type="button" class="text" data-action="auto-end">Usar hora de fin automática</button></div><label>Persona asignada<select name="worker_id"><option value="">Pendiente de asignación</option>${db.workers.map((w) => `<option value="${w.id}" ${sel === w.id ? "selected" : ""}>${esc(w.name)} · ${esc(workerCities(w).join(", "))}</option>`).join("")}</select></label><div id="assignment-info" aria-live="polite"></div><section class="availability-guide" aria-label="Explorar disponibilidad"><h3>Buscar otra fecha para esta franja</h3><p class="hint">Los recuentos corresponden al horario Desde–Hasta elegido.</p><div id="availability-dates"></div></section></div><div class="service-billing"><div class="form-grid"><label>Importe total (€)<input name="amount" type="number" min="0" step="0.01" required value="${s.amount ?? (store.mode === "demo" ? 36 : 0)}"></label><label>Estado<select name="status">${statuses.map((t) => `<option ${t === (s.status || "pendiente") ? "selected" : ""}>${t}</option>`).join("")}</select></label></div><label>Método de pago<select name="payment_method"><option value="">Sin indicar</option>${[...new Set([...paymentMethods().filter((m) => m.enabled).map((m) => m.name), ...(s.payment_method ? [s.payment_method] : [])])].map((name) => `<option value="${esc(name)}" ${s.payment_method === name ? "selected" : ""}>${esc(name)}</option>`).join("")}</select></label><label>Indicaciones para la visita<textarea name="notes" rows="3">${esc(s.notes || "")}</textarea></label></div><div class="form-actions"><button type="button" class="secondary" data-action="cancel-form">${s.id ? "Volver sin guardar" : "Cancelar"}</button>${cancelServiceButton(s)}<button class="primary">${s.id ? "Guardar cambios" : "Crear servicio"}</button></div><p class="form-error" role="alert"></p></form>`;
+  return `<form id="service-form" class="card form-card" data-end-mode="${s.id ? "manual" : "auto"}"><input type="hidden" name="id" value="${esc(s.id || "")}"><div class="service-customer"><div class="form-section-title"><span>01</span><div><h2>Cliente y atención</h2><p>Busca un cliente existente por su nombre o teléfono.</p></div></div><div class="client-picker"><label for="client-search">Cliente</label><input id="client-search" placeholder="Escribe un nombre o teléfono" autocomplete="off" required role="combobox" aria-autocomplete="list" aria-controls="client-results" aria-describedby="client-info" aria-expanded="false" value="${esc(c.name || "")}"><input type="hidden" name="client_id" value="${esc(s.client_id || "")}"><div id="client-results" role="listbox" aria-label="Clientes coincidentes" hidden></div></div><p class="hint" id="client-info">${esc(c.address || "Selecciona un cliente para consultar su dirección.")}</p><div class="form-grid"><label>Tipo de servicio<select name="tariff" id="tariff-select"><option value="" ${!tariff ? "selected" : ""}>Personalizado</option>${db.tariffs.map((t) => `<option value="${t.id}" ${tariff?.id === t.id ? "selected" : ""}>${esc(t.name)} · ${tariffPriceLabel(t)}</option>`).join("")}</select></label><label>Nombre del servicio<input name="title" required value="${esc(s.title || db.tariffs[0]?.name || "Atención en domicilio")}"></label></div><p id="tariff-price-info" class="hint" aria-live="polite"></p></div><div class="service-scheduling"><div class="form-section-title"><span>02</span><div><h2>Fecha y organización</h2><p>Se comprueba la disponibilidad y que no coincidan los horarios.</p></div></div><div class="form-grid three"><label>Fecha<input type="date" name="date" required value="${esc(s.date || (area === "Coordinación" ? coordinationDate : focusDate))}"></label><label>Desde<input type="time" name="start" required value="${esc(s.start || "09:00")}"></label><label>Hasta<input type="time" name="end" required value="${esc(s.end || "")}"></label></div><div class="end-time-help"><p id="end-time-info" class="hint" aria-live="polite"></p><button type="button" class="text" data-action="auto-end">Usar hora de fin automática</button></div><label>Persona asignada<select name="worker_id"><option value="">Pendiente de asignación</option>${db.workers.map((w) => `<option value="${w.id}" ${sel === w.id ? "selected" : ""}>${esc(w.name)} · ${esc(workerCities(w).join(", "))}</option>`).join("")}</select></label><div id="assignment-info" aria-live="polite"></div><section class="availability-guide" aria-label="Explorar disponibilidad"><h3>Buscar otra fecha para esta franja</h3><p class="hint">Los recuentos corresponden al horario Desde–Hasta elegido.</p><div id="availability-dates"></div></section></div><div class="service-billing"><div class="form-grid"><label>Importe total (€)<input name="amount" type="number" min="0" step="0.01" required value="${s.amount ?? (store.mode === "demo" ? 36 : 0)}"></label><label>Estado<select name="status">${statuses.map((t) => `<option ${t === (s.status || "pendiente") ? "selected" : ""}>${t}</option>`).join("")}</select></label></div><label>Método de pago<select name="payment_method"><option value="">Sin indicar</option>${[...new Set([...paymentMethods().filter((m) => m.enabled).map((m) => m.name), ...(s.payment_method ? [s.payment_method] : [])])].map((name) => `<option value="${esc(name)}" ${s.payment_method === name ? "selected" : ""}>${esc(name)}</option>`).join("")}</select></label><label>Indicaciones para la visita<textarea name="notes" rows="3">${esc(s.notes || "")}</textarea></label></div>${serviceActualTimes(s) ? `<p class="service-real-time">${esc(serviceActualTimes(s))}</p>` : ""}<div class="form-actions"><button type="button" class="secondary" data-action="cancel-form">${s.id ? "Volver sin guardar" : "Cancelar"}</button>${cancelServiceButton(s)}<button class="primary">${s.id ? "Guardar cambios" : "Crear servicio"}</button></div><p class="form-error" role="alert"></p></form>`;
 }
 function calendar(coord) {
   const target = coord ? workerFilter : mine()?.id;
@@ -6820,6 +6894,7 @@ function calendar(coord) {
       counts.assigned
         ? counts.assigned + (counts.assigned === 1 ? " asignado" : " asignados")
         : "",
+      counts.running ? counts.running + " en curso" : "",
       counts.finished
         ? counts.finished +
           (counts.finished === 1 ? " finalizado" : " finalizados")
@@ -6827,7 +6902,7 @@ function calendar(coord) {
     ]
       .filter(Boolean)
       .join(", ");
-    const dayCell = `<button class="cal-day ${date === today() ? "today" : ""} ${date === anchor ? "focused" : ""} ${marks.has(date) ? "selected" : ""} ${blocked ? "blocked" : ""} ${available ? "day-available" : ""} ${partial ? "partial-availability" : ""} ${items.length ? "has-services" : ""} ${counts.unassigned ? "needs-assignment" : ""}" data-date="${date}" aria-label="${dateLabel(date)}${serviceLabels ? ", " + serviceLabels : ", sin servicios"}${hasBlocking ? ", " + blockedText : available ? ", disponible" : ""}${marks.has(date) ? ", marcado para actuar" : ""}" aria-pressed="${date === anchor}"><span class="day-number">${mode === "day" ? `<span class="strip-weekday">${new Date(date + "T12:00:00").toLocaleDateString("es-ES", { weekday: "short" })}</span><span class="strip-day">${d}</span>` : coord && mode !== "month" ? new Date(date + "T12:00:00").toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short" }) : d}</span>${counts.unassigned ? `<small class="calendar-count unassigned-count" title="${counts.unassigned} sin asignar"><span class="count-long">⚠ ${counts.unassigned} sin asignar</span><span class="count-short" aria-hidden="true">⚠ ${counts.unassigned}<span>sin asig.</span></span></small>` : ""}${counts.assigned ? `<small class="calendar-count assigned-count" title="${counts.assigned} asignados"><span class="count-long">✓ ${counts.assigned} ${counts.assigned === 1 ? "asignado" : "asignados"}</span><span class="count-short" aria-hidden="true">✓ ${counts.assigned}<span>asig.</span></span></small>` : ""}${counts.finished ? `<small class="calendar-count finished-count"><span class="count-long">${counts.finished} finalizado${counts.finished === 1 ? "" : "s"}</span><span class="count-short" aria-hidden="true">${counts.finished}<span>finaliz.</span></span></small>` : ""}${hasBlocking ? `<small class="unavailable-label ${partial ? "partial-label" : ""}" title="${blockedText}"><span class="count-long">${blockedText}</span><span class="count-short" aria-hidden="true"><span>${shortAvailability}</span></span></small>` : ""}${marks.has(date) ? '<small class="marked-label">✓ Marcado</small>' : ""}</button>`;
+    const dayCell = `<button class="cal-day ${date === today() ? "today" : ""} ${date === anchor ? "focused" : ""} ${marks.has(date) ? "selected" : ""} ${blocked ? "blocked" : ""} ${available ? "day-available" : ""} ${partial ? "partial-availability" : ""} ${items.length ? "has-services" : ""} ${counts.unassigned ? "needs-assignment" : ""}" data-date="${date}" aria-label="${dateLabel(date)}${serviceLabels ? ", " + serviceLabels : ", sin servicios"}${hasBlocking ? ", " + blockedText : available ? ", disponible" : ""}${marks.has(date) ? ", marcado para actuar" : ""}" aria-pressed="${date === anchor}"><span class="day-number">${mode === "day" ? `<span class="strip-weekday">${new Date(date + "T12:00:00").toLocaleDateString("es-ES", { weekday: "short" })}</span><span class="strip-day">${d}</span>` : coord && mode !== "month" ? new Date(date + "T12:00:00").toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short" }) : d}</span>${counts.unassigned ? `<small class="calendar-count unassigned-count" title="${counts.unassigned} sin asignar"><span class="count-long">⚠ ${counts.unassigned} sin asignar</span><span class="count-short" aria-hidden="true">⚠ ${counts.unassigned}<span>sin asig.</span></span></small>` : ""}${counts.assigned ? `<small class="calendar-count assigned-count" title="${counts.assigned} asignados"><span class="count-long">✓ ${counts.assigned} ${counts.assigned === 1 ? "asignado" : "asignados"}</span><span class="count-short" aria-hidden="true">✓ ${counts.assigned}<span>asig.</span></span></small>` : ""}${counts.running ? `<small class="calendar-count calendar-running">${counts.running} en curso</small>` : ""}${counts.finished ? `<small class="calendar-count finished-count" title="${counts.finished} finalizados"><span class="count-long">${counts.finished} finalizado${counts.finished === 1 ? "" : "s"}</span><span class="count-short" aria-hidden="true">${counts.finished} fin.</span></small>` : ""}${hasBlocking ? `<small class="unavailable-label ${partial ? "partial-label" : ""}" title="${blockedText}"><span class="count-long">${blockedText}</span><span class="count-short" aria-hidden="true"><span>${shortAvailability}</span></span></small>` : ""}${marks.has(date) ? '<small class="marked-label">✓ Marcado</small>' : ""}</button>`;
     cells +=
       mode === "day"
         ? dayCell
@@ -6900,7 +6975,7 @@ function workersView() {
   return `<div class="toolbar"><p>${db.workers.length} personas en el equipo</p>${btn("+ Añadir empleado", "new-worker")}</div><div class="employee-grid">${db.workers
     .map(
       (w) =>
-        `<article class="card employee-card"><div class="employee-heading"><span class="person-avatar green" aria-hidden="true">${esc(w.name?.[0] || "?")}</span><div><h2>${esc(w.name)}</h2><small>${[w.town, w.phone].filter(Boolean).map(esc).join(" · ")}</small></div></div><div class="tags">${workerCities(
+        `<article class="card employee-card"><div class="employee-heading"><span class="person-avatar green" aria-hidden="true">${esc(w.name?.[0] || "?")}</span><div><h2>${esc(w.name)}</h2><small>${[w.employee_number ? "N.º " + w.employee_number : "", w.town, w.phone].filter(Boolean).map(esc).join(" · ")}</small></div></div><div class="tags">${workerCities(
           w,
         )
           .map((z) => `<span>${esc(z)}</span>`)
@@ -7020,24 +7095,30 @@ const paymentReportModes = {
   pending: "Solo pendientes de cobro",
   paid: "Solo servicios cobrados",
 };
-function paymentReport(mode = "all") {
+function paymentReport(mode = "all", includeIndex = false) {
   const list = paymentServices().filter((s) =>
     mode === "all" || (mode === "paid" ? s.paid : !s.paid)
   );
   const first = list.at(-1)?.date;
   const last = list[0]?.date;
   const period = first ? (first === last ? dateLabel(first) : dateLabel(first) + " – " + dateLabel(last)) : "Sin servicios registrados";
-  const rows = list.map((s) => `<tr><td>${esc(dateLabel(s.date))}<small>${esc(serviceTimes(s))}</small></td><td><b>${esc(client(s).name || "Cliente")}</b><small>${esc(s.title)}</small></td><td>${esc(worker(s.worker_id).name || "Sin asignar")}</td><td>${s.paid ? "Cobrado" : "Pendiente"}<small>${esc(s.payment_method || "Sin indicar")}</small></td><td>${euro(s.amount)}</td></tr>`).join("");
+  const staff = [...new Set(list.map(s => s.worker_id).filter(Boolean))].map(worker).filter(w => w.employee_number);
+  const employeeIndex = includeIndex && staff.length
+    ? `<section class="report-employee-index"><h2>Índice interno de empleados</h2><ul>${staff.sort((a,b) => a.employee_number-b.employee_number).map(w => `<li>N.º ${esc(w.employee_number)} · ${esc(w.name)}</li>`).join("")}</ul></section>`
+    : "";
+  const rows = list.map((s) => `<tr><td>${esc(dateLabel(s.date))}<small>${esc(serviceTimes(s))}</small></td><td><b>${esc(client(s).name || "Cliente")}</b><small>${esc(s.title)}</small></td><td>${s.worker_id ? (worker(s.worker_id).employee_number ? "N.º " + esc(worker(s.worker_id).employee_number) : "Sin número") : "Sin asignar"}</td><td>${s.paid ? "Cobrado" : "Pendiente"}<small>${esc(s.payment_method || "Sin indicar")}</small></td><td>${euro(s.amount)}</td></tr>`).join("");
   return `<article class="report-paper"><header class="report-heading"><img src="${esc(currentAppLogo())}" alt="Logo de la marca"><div><h1>Informe de cobros</h1>${mode === "all" ? "" : `<p><b>${paymentReportModes[mode]}</b></p>`}<p>Emitido el ${esc(dateLabel(today()))}</p></div></header>
     <p><b>Fechas de servicio</b><br>${esc(period)}</p>
     <p>${list.length} servicios · ${list.filter((s) => s.paid).length} cobrados · ${list.filter((s) => !s.paid).length} pendientes</p>
     ${paymentSummary(list, "report-summary")}
     <div class="report-table-wrap"><table><thead><tr><th scope="col">Fecha y horario</th><th scope="col">Cliente y servicio</th><th scope="col">Empleado</th><th scope="col">Cobro y método</th><th scope="col">Importe</th></tr></thead><tbody>${rows || '<tr><td colspan="5">Sin servicios para mostrar.</td></tr>'}</tbody></table></div>
+    ${employeeIndex}
     <p class="report-note">Seguimiento interno · Excluye servicios cancelados · No sustituye una factura.${store.mode === "demo" ? " Datos de demostración." : ""}</p>
   </article>`;
 }
 function showPaymentReport() {
   dialog("Vista previa del informe", `${paymentReport()}<div class="form-actions">
+    <label class="report-index-option"><input type="checkbox" id="payment-include-index"> Incluir índice interno (número y nombre)</label>
     ${btn("Descargar informe", "download-payment-report", "", "secondary")}
     ${btn("Imprimir", "print-payment-report")}
   </div><div class="report-print-options" hidden>
@@ -7046,12 +7127,15 @@ function showPaymentReport() {
     ${btn("Confirmar impresión", "confirm-payment-print")}
   </div>`, "payment-report-dialog");
 }
-function refreshPaymentReport(mode) {
-  $(".payment-report-dialog .report-paper").outerHTML = paymentReport(mode);
+function selectedPaymentReport() {
+  return paymentReport($("#payment-print-mode")?.value || "all", $("#payment-include-index")?.checked === true);
+}
+function refreshPaymentReport() {
+  $(".payment-report-dialog .report-paper").outerHTML = selectedPaymentReport();
 }
 function downloadPaymentReport() {
   const styles = $("#payment-report-styles").textContent;
-  const file = new Blob([`<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Informe de cobros</title><style>${styles}</style><body>${paymentReport($("#payment-print-mode")?.value || "all")}</body></html>`], { type: "text/html" });
+  const file = new Blob([`<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Informe de cobros</title><style>${styles}</style><body>${selectedPaymentReport()}</body></html>`], { type: "text/html" });
   const url = URL.createObjectURL(file);
   const link = document.createElement("a");
   link.href = url;
@@ -7182,7 +7266,7 @@ function dialog(title, content, className = "") {
     if (dialogId && current?.session === navigationSession && current.dialog === dialogId) history.back();
   });
 }
-function clientContactLinks(c) {
+function clientContactLinks(c, phoneOnly = false) {
   const phone = (c.phone || "").trim().replace(/[^+\d]/g, "");
   const digits = phone.replace(/\D/g, "");
   const international = digits.length === 9 ? "34" + digits : digits.replace(/^00/, "");
@@ -7192,7 +7276,7 @@ function clientContactLinks(c) {
     link("Llamar", "tel:" + phone, "M6.6 10.8a15.2 15.2 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.2c1 .3 2.2.5 3.3.5a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.1.2 2.3.5 3.3a1 1 0 0 1-.2 1z"),
     link("WhatsApp", "https://wa.me/" + international, "M12 2a10 10 0 0 0-8.7 14.9L2 22l5.2-1.3A10 10 0 1 0 12 2zm0 1.8a8.2 8.2 0 1 1-4.5 15l-.3-.2-2.7.7.7-2.7-.2-.3A8.2 8.2 0 0 1 12 3.8zM8.6 7.4c-.6 0-1.2.7-1.2 1.6 0 2.3 2.9 5.8 6 6.8 1.7.5 3-.2 3.3-1.3.1-.4 0-.6-.3-.7l-2-1c-.3-.1-.5-.1-.7.2l-.6.7c-.2.2-.4.2-.6.1-1.4-.6-2.3-1.4-2.9-2.6-.1-.3 0-.4.2-.6.3-.3.5-.6.4-.9l-.8-2c-.1-.2-.3-.3-.8-.3z", 'target="_blank" rel="noopener noreferrer"'),
     link("SMS", "sms:" + phone, "M3 3h18a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H8l-5 4V4a1 1 0 0 1 1-1zm3 5v2h12V8zm0 4v2h8v-2z"),
-  ].join("") : ""}${c.email ? link("Correo", "mailto:" + encodeURIComponent(c.email), "M2 4h20v16H2zm2 2v1l8 5 8-5V6l-8 5z") : ""}</div>`;
+  ].slice(0, phoneOnly ? 2 : 3).join("") : ""}${!phoneOnly && c.email ? link("Correo", "mailto:" + encodeURIComponent(c.email), "M2 4h20v16H2zm2 2v1l8 5 8-5V6l-8 5z") : ""}</div>`;
 }
 function clientServiceSummary(id) {
   const services = db.services.filter((s) => s.client_id === id);
@@ -7214,7 +7298,7 @@ function personForm(kind, id) {
       : id
         ? "Ficha de empleado"
         : "Añadir empleado",
-    `<form id="person-form" data-table="${kind}">${isClient && id ? clientServiceSummary(id) : ""}<input type="hidden" name="id" value="${esc(x.id || "")}"><label>${isClient ? "Nombre y apellidos" : "Nombre"}<input name="name" ${isClient ? 'autocomplete="name"' : ""} required value="${esc(x.name || "")}"></label><label>Teléfono<input name="phone" type="tel" required value="${esc(x.phone || "")}"></label><label>Correo electrónico<input type="email" name="email" autocomplete="email" value="${esc(x.email || "")}"></label>${isClient ? `${id ? `<label>Dirección<input name="address" required value="${esc(x.address || "")}"></label>` : `<fieldset class="client-address"><legend>Dirección</legend><div class="client-address-grid"><label>Calle<input name="street" autocomplete="address-line1" required></label><label>Número de puerta<input name="door_number" required></label></div></fieldset>`}<label>Zona<input name="zone" required value="${esc(x.zone || "")}"></label><label>Información para la atención<textarea name="notes">${esc(x.notes || "")}</textarea></label>` : `${workerZoneFields(x)}<p class="hint">${x.user_id ? "Esta ficha ya tiene una cuenta vinculada." : "La ficha organiza el equipo. El alta de acceso se vincula con el usuario de Supabase al activar la cuenta."}</p>`}<div class="${isClient ? "client-form-footer" : "employee-form-footer"}">${!isClient && x.id && user.role === "admin" ? btn("Borrar empleado", "delete-worker", 'type="button"', "secondary delete-worker") : ""}<div class="person-form-buttons"><button type="button" class="secondary" data-action="close-dialog">Cancelar</button><button class="primary">Guardar ficha</button></div>${isClient && id ? clientContactLinks(x) : ""}</div><p class="form-error" role="alert"></p></form>`,
+    `<form id="person-form" data-table="${kind}">${isClient && id ? clientServiceSummary(id) : ""}<input type="hidden" name="id" value="${esc(x.id || "")}"><label>${isClient ? "Nombre y apellidos" : "Nombre"}<input name="name" ${isClient ? 'autocomplete="name"' : ""} required value="${esc(x.name || "")}"></label><label>Teléfono<input name="phone" type="tel" required value="${esc(x.phone || "")}"></label><label>Correo electrónico<input type="email" name="email" autocomplete="email" value="${esc(x.email || "")}"></label>${isClient ? `${id ? `<label>Dirección<input name="address" required value="${esc(x.address || "")}"></label>` : `<fieldset class="client-address"><legend>Dirección</legend><div class="client-address-grid"><label>Calle<input name="street" autocomplete="address-line1" required></label><label>Número de puerta<input name="door_number" required></label></div></fieldset>`}<label>Zona<input name="zone" required value="${esc(x.zone || "")}"></label><label>Información para la atención<textarea name="notes">${esc(x.notes || "")}</textarea></label>` : `<label>Número de empleado<input name="employee_number" type="number" min="1" max="2147483647" step="1" placeholder="Automático" value="${esc(x.employee_number ?? "")}" ${user.role !== "admin" ? "readonly" : ""} ${x.id ? "required" : ""}></label>${workerZoneFields(x)}<p class="hint">${x.user_id ? "Esta ficha ya tiene una cuenta vinculada." : "La ficha organiza el equipo. El alta de acceso se vincula con el usuario de Supabase al activar la cuenta."}</p>`}<div class="${isClient ? "client-form-footer" : "employee-form-footer"}">${!isClient && x.id && user.role === "admin" ? btn("Borrar empleado", "delete-worker", 'type="button"', "secondary delete-worker") : ""}<div class="person-form-buttons"><button type="button" class="secondary" data-action="close-dialog">Cancelar</button><button class="primary">Guardar ficha</button></div>${isClient && id ? clientContactLinks(x) : ""}</div><p class="form-error" role="alert"></p></form>`,
     isClient ? "client-dialog" : "",
   );
 }
@@ -7254,14 +7338,30 @@ function editService(id) {
   const assignment = $("#service-form").elements.worker_id;
   assignment.focus();
 }
+const actualTimeFormat = new Intl.DateTimeFormat("es-ES", { timeZone: "Europe/Madrid", dateStyle: "short", timeStyle: "short" });
+function serviceActualTimes(s) {
+  if (!s.actual_started_at && !s.actual_finished_at) return "";
+  const format = value => value ? actualTimeFormat.format(new Date(value)) : "—";
+  return "Inicio real: " + format(s.actual_started_at) + " · Fin real: " + format(s.actual_finished_at);
+}
+function serviceAddress(s, c) {
+  const webVisit = String(s.notes || "").match(/^Cita web confirmada\. Pago pendiente\. · Dirección de la visita: (.+?) · Localidad: (.+?)(?: · Persona a acompañar: .*|$)/);
+  return (webVisit ? [webVisit[1], webVisit[2]] : [c.address, c.zone]).filter(Boolean).join(", ");
+}
+function serviceTimeAction(s) {
+  if (user.role !== "worker" || !s.worker_id || s.worker_id !== mine()?.id ||
+      !["asignado", "en curso"].includes(s.status)) return null;
+  return s.actual_started_at ? (s.actual_finished_at ? null : "finish") : "start";
+}
 function detail(id) {
   const s = db.services.find((s) => s.id === id);
   if (!s) return;
-  const c = client(s),
-    w = worker(s.worker_id);
+  const c = client(s), w = worker(s.worker_id);
+  const address = serviceAddress(s, c), actual = serviceActualTimes(s), timeAction = serviceTimeAction(s);
+  const maps = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(address);
   dialog(
     "Detalle del servicio",
-    `<div class="service-detail">${badge(s.status)}<h3>${esc(s.title)}</h3><h2>${esc(c.name)}</h2><p>${dateLabel(s.date)} · ${serviceTimes(s)}</p><div class="detail-box"><b>Dirección</b><p>${esc(c.address)}</p><a href="tel:${esc(c.phone?.replace(/[^+\d]/g, ""))}">${esc(c.phone)}</a></div><p><b>Persona asignada</b><br>${esc(w.name || "Pendiente de asignación")}</p><p><b>Indicaciones</b><br>${esc(s.notes || "Sin indicaciones adicionales.")}</p><p>${esc(c.notes)}</p>${user.role === "admin" ? `<p><b>Importe:</b> ${euro(s.amount)} · ${s.paid ? "Cobrado" : "Pendiente de cobro"}<br><b>Método:</b> ${esc(s.payment_method || "Sin indicar")}</p>${btn("Editar / asignar servicio", "edit-service", `data-id="${id}"`)}${cancelServiceButton(s)}` : ""}</div>`,
+    `<div class="service-detail">${badge(s.status)}<h3>${esc(s.title)}</h3><h2>${esc(c.name)}</h2><p>${dateLabel(s.date)} · ${serviceTimes(s)}</p><div class="detail-box"><b>Dirección</b><p>${address ? `<a class="service-maps" href="${esc(maps)}" target="_blank" rel="noopener noreferrer" title="Abrir en Google Maps"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="#4285f4" d="M12 1a8 8 0 0 0-8 8c0 5 8 14 8 14s8-9 8-14a8 8 0 0 0-8-8z"/><circle cx="12" cy="9" r="3" fill="#fff"/></svg>${esc(address)}</a>` : "Sin indicar"}</p>${c.phone ? `<p><b>Teléfono</b> · ${esc(c.phone)}</p>${clientContactLinks(c, true)}` : ""}</div>${actual ? `<p class="service-real-time">${esc(actual)}</p>` : ""}${timeAction ? `<div class="form-actions">${btn(timeAction === "start" ? "Iniciar servicio" : "Finalizar servicio", "service-time", `type="button" data-id="${esc(id)}"`)}</div>` : ""}<p><b>Persona asignada</b><br>${esc(w.name || "Pendiente de asignación")}</p><p><b>Indicaciones</b><br>${esc(s.notes || "Sin indicaciones adicionales.")}</p><p>${esc(c.notes)}</p>${user.role === "admin" ? `<p><b>Importe:</b> ${euro(s.amount)} · ${s.paid ? "Cobrado" : "Pendiente de cobro"}<br><b>Método:</b> ${esc(s.payment_method || "Sin indicar")}</p>${btn("Editar / asignar servicio", "edit-service", `data-id="${id}"`)}${cancelServiceButton(s)}` : ""}</div>`,
   );
 }
 function go(p, slot = null) {
@@ -7745,6 +7845,27 @@ document.addEventListener("click", (e) => {
       case "edit-service":
         editService(t.dataset.id);
         break;
+      case "service-time": {
+        const id = t.dataset.id;
+        const service = db.services.find(s => s.id === id);
+        const mark = service && serviceTimeAction(service);
+        if (!mark || (mark === "finish" && !window.confirm("¿Finalizar este servicio?"))) break;
+        if (store.mode === "cloud") {
+          await store.request("/rest/v1/rpc/umec2_register_service_time", {
+            method: "POST", body: { p_service: id, p_action: mark },
+          });
+        } else {
+          const now = new Date().toISOString();
+          Object.assign(service, mark === "start"
+            ? { status: "en curso", actual_started_at: now }
+            : { status: "completado", actual_finished_at: now });
+          store.save();
+        }
+        await refresh();
+        detail(id);
+        toast(mark === "start" ? "Inicio registrado." : "Servicio finalizado.");
+        break;
+      }
       case "cancel-service": {
         const s = db.services.find((s) => s.id === t.dataset.id);
         if (!canCancelService(s)) break;
@@ -8105,6 +8226,11 @@ function submitForm(f, submitter) {
             item.zones = [...new Set(new FormData(f).getAll("zones"))];
             if (!item.zones.length)
               throw Error("Selecciona al menos una ciudad de desplazamiento.");
+            const number = values.employee_number === "" ? null : Number(values.employee_number);
+            if (number != null && (!Number.isInteger(number) || number < 1 || number > 2147483647)) throw Error("Indica un número de empleado válido.");
+            if (number != null && db.workers.some(w => w.id !== item.id && w.employee_number === number)) throw Error("Ese número ya pertenece a otro empleado.");
+            if (number == null) delete item.employee_number;
+            else item.employee_number = number;
             item.user_id = old?.user_id || null;
             item.email = values.email.trim() || null;
             if (store.mode === "cloud" && !Object.hasOwn(old || db.workers[0] || {}, "email") && !item.email)
@@ -8387,7 +8513,7 @@ function previewAppearance(target) {
 document.addEventListener("change", (e) => {
   if (e.target.closest("#appearance-form")) previewAppearance(e.target);
   const id = e.target.id;
-  if (id === "payment-print-mode") refreshPaymentReport(e.target.value);
+  if (id === "payment-print-mode" || id === "payment-include-index") refreshPaymentReport();
   if (id === "payment-filter") {
     filter = e.target.value;
     paymentPage = 0;

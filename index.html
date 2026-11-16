@@ -7,7 +7,7 @@
     <link rel="manifest" href="umec-v2.webmanifest?v=503">
     <link rel="icon" type="image/png" sizes="32x32" href="umec-v2-icon-32.png">
     <link rel="apple-touch-icon" sizes="192x192" href="umec-v2-icon-192.png">
-    <title>UMEC Gestión · UMEC V2 v5.0.23</title>
+    <title>UMEC Gestión · UMEC V2 v5.0.24</title>
     <style>:root {
   --accent: #155b69;
   --ink: #203c44;
@@ -4801,11 +4801,11 @@ button.cal-day[data-date].has-services .calendar-count.assigned-count {
   font-size: 1.24em;
   font-style: italic;
   font-weight: 700;
-  color: #017f67;
+  color: var(--agenda-mi-green, #017f67);
 }
 @supports (background-clip: text) {
   .my-agenda-ink {
-    background: linear-gradient(158deg, #bf6159 0 54%, #017f67 60% 100%);
+    background: linear-gradient(158deg, var(--agenda-mi-red, #bf6159) 0 54%, var(--agenda-mi-green, #017f67) 60% 100%);
     background-clip: text;
     color: transparent;
   }
@@ -4813,9 +4813,9 @@ button.cal-day[data-date].has-services .calendar-count.assigned-count {
 @media (max-width: 800px) {
   .shell > .sidebar .nav-item:has(.my-agenda-word) { gap: 2px; }
   .shell > .sidebar .nav-label:has(.my-agenda-word) { display: grid; }
-  :root[data-skin="petrol"] .nav-item:not(.current) .my-agenda-word { background:#f6fff9; border-radius:3px; }
+  :root[data-skin="petrol"] .sidebar .nav-item:not(.current) { --agenda-mi-red: #ec9b91; --agenda-mi-green: #73dbc0; }
 }
-:root[data-mode="dark"] .my-agenda-word { background:#f6fff9; border-radius:3px; }
+:root[data-mode="dark"] .sidebar .nav-item { --agenda-mi-red: #ec9b91; --agenda-mi-green: #73dbc0; }
 .report-index-option { display:inline-flex; flex-direction:row; align-items:center; gap:6px; }
 .report-index-option input { width:auto; }
 </style>

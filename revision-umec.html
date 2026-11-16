@@ -8,7 +8,7 @@
     <meta name="theme-color" content="#155b69" />
     <link rel="icon" type="image/png" sizes="32x32" href="umec-v2-icon-32.png">
     <link rel="apple-touch-icon" sizes="192x192" href="umec-v2-icon-192.png">
-    <title>UMEC Gestión · Revisión v2.2.8</title>
+    <title>UMEC Gestión · Revisión v2.2.9</title>
     <style>:root {
   --accent: #155b69;
   --ink: #203c44;
@@ -4837,7 +4837,23 @@ button.secondary.delete-client:hover { background:#fff3f4; }
 .reports-layout h2 { margin-top:0; }
 @media(max-width:620px) {
   .reports-layout { grid-template-columns:1fr; }
-  .workspace .topbar .area-tabs:has(button:nth-child(5)) { grid-template-columns:repeat(3,minmax(0,1fr)); grid-auto-flow:row; }
+}
+</style>
+<style>
+@media (max-width: 620px) {
+  .workspace .topbar .area-tabs:has(> button:nth-child(5):last-child) {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-auto-flow: row;
+    gap: 5px;
+  }
+  .workspace .topbar .area-tabs:has(> button:nth-child(5):last-child) > button {
+    grid-column: span 2;
+    padding-inline: 3px;
+    white-space: nowrap;
+  }
+  .workspace .topbar .area-tabs:has(> button:nth-child(5):last-child) > button:nth-child(n + 4) {
+    grid-column: span 3;
+  }
 }
 </style>
 </head>
@@ -6317,7 +6333,7 @@ function login(message = "") {
         </div>
         <section class="access-card" aria-labelledby="access-title">
           <h1 id="access-title">Revisión de UMEC V2</h1>
-          <p class="access-intro">Versión 2.2.8 · Datos de ejemplo</p>
+          <p class="access-intro">Versión 2.2.9 · Datos de ejemplo</p>
           <p id="login-feedback" class="login-feedback" role="status">${esc(message)}</p>
             <div class="demo-options">
               ${btn("Demo administrador", "demo-admin", 'type="button"', "secondary full")}

@@ -8,7 +8,7 @@
     <meta name="theme-color" content="#155b69" />
     <link rel="icon" type="image/png" sizes="32x32" href="umec-v2-icon-32.png">
     <link rel="apple-touch-icon" sizes="192x192" href="umec-v2-icon-192.png">
-    <title>UMEC Gestión · Revisión v2.2.11</title>
+    <title>UMEC Gestión · Revisión v2.2.12</title>
     <style>:root {
   --accent: #155b69;
   --ink: #203c44;
@@ -4943,52 +4943,66 @@ button.secondary.delete-client:hover { background:#fff3f4; }
 }
 </style>
 <style>
-.mobile-agenda-count { display: none; }
-@media (max-width: 800px) {
+/* Compact spacing for the administrator on narrow screens. */
+@media screen and (max-width: 800px) {
   .admin-shell .workspace .topbar { padding: 4px 10px; }
-  .admin-shell .mode-banner {
-    padding: 4px 10px;
-    gap: 4px 8px;
-    flex-wrap: wrap;
+  .admin-shell .mode-banner { padding: 4px 10px; gap: 3px 8px; flex-wrap: wrap; }
+  .admin-shell > .workspace > #content { padding: 10px 10px 6px; }
+  .admin-shell #content .page-heading { gap: 6px; margin-bottom: 10px; }
+  .admin-shell #content .page-heading .eyebrow { margin-bottom: 2px; }
+  .admin-shell #content .page-heading h1 { font-size: 22px; line-height: 1.15; }
+  .admin-shell #content .page-heading p { margin: 2px 0 0; line-height: 1.35; }
+  .admin-shell #content .page-heading > .primary { margin-top: 0; }
+  .admin-shell #content.admin-home .home-heading { margin: 0; }
+  .admin-shell #content .card { padding: 8px 10px; }
+  .admin-shell #content .card h2 { font-size: 16px; }
+  .admin-shell #content .section-heading { gap: 8px; margin-bottom: 4px; }
+  .admin-shell #content .empty { padding: 12px 8px; }
+  .admin-shell #content .toolbar { gap: 6px; margin-bottom: 8px; }
+  .admin-shell #content .toolbar label { min-width: 0; }
+  .admin-shell #content .toolbar p { margin-block: 0; }
+  .admin-shell #content .toolbar button { min-height: 44px; }
+  .admin-shell #content .stats { gap: 6px; margin-bottom: 8px; }
+  .admin-shell #content .stats > :is(article, button) { padding: 5px 8px; }
+  .admin-shell #content .stats > :is(article, button) > b {
+    font-size: 18px;
+    margin: 2px 0;
+    line-height: 1.15;
   }
-  .admin-shell .mode-banner button { font-size: 11px; min-height: 36px; }
-  .admin-shell .page-heading { gap: 8px; margin-bottom: 12px; }
-  .admin-shell .page-heading h1 { font-size: 23px; }
-  .admin-shell #content:not(.planning-page) { padding: 12px 10px 6px; }
-  .admin-shell #content.admin-home { padding-top: 6px; }
-  .admin-home .home-heading { margin: 0; }
-  .admin-home .stats > button {
-    min-height: 48px;
-    border-radius: 10px;
-    padding: 4px 6px;
+  .admin-shell #content.admin-home .service-row,
+  .admin-shell #content .clients-list .client-row,
+  .admin-shell #content .list-card .service-row,
+  .admin-shell #content .payment-row { padding-block: 6px; }
+  .admin-shell #content .service-row { gap: 8px; }
+  .admin-shell #content .service-main { min-width: 0; overflow-wrap: anywhere; }
+  .admin-shell #content .form-grid,
+  .admin-shell #content .form-actions,
+  .admin-shell #content .form-card,
+  .admin-shell #content .employee-grid,
+  .admin-shell #content .settings-list,
+  .admin-shell #content .reports-layout,
+  .admin-shell #content .calendar-layout { gap: 8px; }
+  .admin-shell #content .form-card label { margin-block: 4px; }
+  .admin-shell #content .form-section-title { gap: 6px; margin-bottom: 6px; }
+  .admin-shell #content .form-section-title p,
+  .admin-shell #content .reports-layout p { margin-block: 3px 5px; line-height: 1.4; }
+  .admin-shell #content .settings-group h2 { margin-bottom: 4px; }
+  .admin-shell #content .settings-group > details { margin-block: 4px; }
+  .admin-shell #content .settings-group summary { min-height: 44px; padding-block: 5px; }
+  .admin-shell #content .calendar-weekdays { margin-bottom: 3px; }
+  .admin-shell #content .calendar-legend { gap: 4px 8px; margin-block: 5px; }
+  .admin-shell #content .planning-header-actions:empty { display: none; }
+  .admin-shell #content .planning-calendar .daily { padding: 8px 10px; }
+  .admin-shell #content .personal-calendar .cal-day,
+  .admin-shell #content .planning-month-mode .cal-day { min-height: 44px; padding: 3px; }
+  .admin-shell #content .reports-layout .form-grid,
+  .admin-shell #content .payment-toolbar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .admin-home .stats > button > span { font-size: 11px; }
-  .admin-home .stats > button > b { font-size: 18px; line-height: 1.2; }
-  .admin-home .mobile-agenda-count { display: inline; }
-  .admin-home .dashboard-grid .card { padding: 4px 8px; border-radius: 10px; }
-  .admin-home .section-heading button { min-height: 44px; padding: 4px 0 4px 8px; }
-  .admin-home .admin-daily-services .service-row {
-    min-height: 44px;
-    gap: 6px;
-    padding: 3px 0;
-  }
-  .admin-home .admin-daily-services .time { min-width: 36px; font-size: 13px; }
-  .admin-home .admin-daily-services .time small { margin-top: 1px; }
-  .admin-home .admin-daily-services .service-main { min-width: 0; }
-  .admin-home .admin-daily-services .service-main > * {
-    display: block;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    line-height: 1.25;
-  }
-  .admin-home .admin-daily-services > .service-row:nth-child(n + 4) { display: none; }
-}
-@media (max-width: 800px) and (max-height: 650px) {
-  .admin-home .admin-daily-services > .service-row:nth-child(n + 3) { display: none; }
-}
-@media (max-width: 800px) and (max-height: 500px) {
-  .admin-home .admin-daily-services > .service-row:nth-child(n + 2) { display: none; }
+  .admin-shell #content .payment-toolbar label:first-child { margin-inline-end: 0; }
+  .admin-shell #content .payment-toolbar :is(input, select),
+  .admin-shell #content .reports-layout :is(input, select) { width: 100%; min-width: 0; }
 }
 </style>
 </head>
@@ -6468,7 +6482,7 @@ function login(message = "") {
         </div>
         <section class="access-card" aria-labelledby="access-title">
           <h1 id="access-title">Revisión de UMEC V2</h1>
-          <p class="access-intro">Versión 2.2.11 · Datos de ejemplo</p>
+          <p class="access-intro">Versión 2.2.12 · Datos de ejemplo</p>
           <p id="login-feedback" class="login-feedback" role="status">${esc(message)}</p>
             <div class="demo-options">
               ${btn("Demo administrador", "demo-admin", 'type="button"', "secondary full")}
@@ -6656,8 +6670,8 @@ function dashboard() {
   const metric = (label, value, hint, target) =>
     `<button type="button" data-metric="${target}" class="${target === "unassigned" && value > 0 ? "metric-alert" : ""}"><span>${target === "unassigned" && value > 0 ? '<i aria-hidden="true">!</i> ' : ""}${label}</span><b>${value}</b><small>${hint} →</small></button>`;
   const todayMetric = metric("Servicios de hoy", daily.length, "Ver servicios de hoy", "today");
-  const agenda = `<div class="dashboard-grid"><section class="card"><div class="section-heading"><div><h2>La agenda del día${admin ? `<span class="mobile-agenda-count" aria-label="${daily.length} servicios"> · ${daily.length}</span>` : ""}</h2></div><button class="text" data-page="${admin ? "Planificación" : "Agenda"}" ${admin ? 'data-go-coord="true"' : ""}>Ver agenda →</button></div>${
-    daily.length ? (admin ? `<div class="admin-daily-services">${daily.map(serviceRow).join("")}</div>` : daily.map(serviceRow).join("")) : empty("No hay servicios para hoy.")
+  const agenda = `<div class="dashboard-grid"><section class="card"><div class="section-heading"><div><h2>La agenda del día</h2></div><button class="text" data-page="${admin ? "Planificación" : "Agenda"}" ${admin ? 'data-go-coord="true"' : ""}>Ver agenda →</button></div>${
+    daily.length ? daily.map(serviceRow).join("") : empty("No hay servicios para hoy.")
   }</section></div>`;
 
   if (admin) {

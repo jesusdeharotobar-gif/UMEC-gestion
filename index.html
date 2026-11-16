@@ -7,7 +7,7 @@
     <link rel="manifest" href="umec-v2.webmanifest?v=503">
     <link rel="icon" type="image/png" sizes="32x32" href="umec-v2-icon-32.png">
     <link rel="apple-touch-icon" sizes="192x192" href="umec-v2-icon-192.png">
-    <title>UMEC Gestión · UMEC V2 v2.2.6</title>
+    <title>UMEC Gestión · UMEC V2 v2.2.8</title>
     <style>:root {
   --accent: #155b69;
   --ink: #203c44;
@@ -4830,6 +4830,15 @@ button.secondary.delete-client:hover { background:#fff3f4; }
 .settings-list summary > :is(.backup-shield, .settings-outline-icon) { display: inline-grid; place-items: center; }
 .settings-list :is(.backup-shield, .settings-outline-icon) svg { display:block; }
 </style>
+<style>
+.reports-layout { display:grid; gap:14px; grid-template-columns:repeat(2,minmax(0,1fr)); }
+.reports-layout > :first-child { grid-column:1/-1; }
+.reports-layout h2 { margin-top:0; }
+@media(max-width:620px) {
+  .reports-layout { grid-template-columns:1fr; }
+  .workspace .topbar .area-tabs:has(button:nth-child(5)) { grid-template-columns:repeat(3,minmax(0,1fr)); grid-auto-flow:row; }
+}
+</style>
 </head>
   <body>
     <div id="app"></div>
@@ -6346,14 +6355,15 @@ function render() {
             "Cobros",
           ]
         : ["Inicio", "Agenda", "Servicios"];
-  const teamArea = area === "Coordinación" || page === "Cobros";
+  const teamArea = area === "Coordinación" || ["Cobros", "Informes"].includes(page);
   const topTabs = [
     "Mi gestión",
     ...(user.role === "admin" && menuModuleEnabled("Coordinación") ? ["Coordinación"] : []),
     ...(user.role === "admin" && menuModuleEnabled("Cobros") ? ["Cobros"] : []),
     ...(user.role === "admin" && menuModuleEnabled("Empleados") ? ["Empleados"] : []),
+    ...(user.role === "admin" ? ["Informes"] : []),
   ];
-  const currentTab = ["Empleados", "Cobros"].includes(page) ? page : area;
+  const currentTab = ["Empleados", "Cobros", "Informes"].includes(page) ? page : area;
   $("#app").innerHTML =
     `<div class="shell ${teamArea ? "team-area" : ""} ${menuCollapsed ? "menu-collapsed" : ""}">${teamArea ? "" : `<aside class="sidebar" id="main-menu"><a class="brand" href="#" data-action="home"><img src="${currentAppLogo()}" alt="UMEC Gestión"><span>UNA MANO EN CASA</span></a><p class="nav-caption">${area === "Coordinación" ? "ORGANIZAR EL EQUIPO" : "MI ESPACIO"}</p><nav aria-label="Menú principal">${nav.filter((n) => user.role !== "admin" || menuModuleEnabled(n)).map((n) => `<button data-page="${n}" class="nav-item ${n === page ? "current" : ""}" aria-label="${n === "Agenda" ? "Mi Agenda" : n}" title="${n === "Agenda" ? "Mi Agenda" : n}"><span aria-hidden="true">${icons[n]}</span><span class="nav-label">${n === "Crear servicios" ? '<span class="nav-label-full">Crear servicios</span><span class="nav-label-short" aria-hidden="true">Crear</span>' : n === "Agenda" ? '<span class="my-agenda-word" aria-hidden="true"><span class="my-agenda-ink">Mi</span></span><span class="my-agenda-title">Agenda</span>' : n}</span></button>`).join("")}</nav><button type="button" class="menu-toggle secondary" data-action="toggle-menu" aria-label="${menuCollapsed ? "Expandir menú" : "Recoger menú"}" title="${menuCollapsed ? "Expandir menú" : "Recoger menú"}" aria-expanded="${!menuCollapsed}" aria-controls="main-menu"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 6 8 12l6 6"/></svg></button></aside>`}<div class="workspace"><header class="topbar"><div class="topbar-navigation"><img class="team-logo ${teamArea ? "" : "mobile-header-logo"}" src="${currentAppLogo()}" alt="UMEC Gestión"><div class="area-tabs" role="group" aria-label="Área de trabajo">${topTabs.map((a) => `<button data-area="${a}" class="${currentTab === a ? "active" : ""}" aria-current="${currentTab === a ? "page" : "false"}">${a}</button>`).join("")}</div></div>${accountMenu()}</header><div class="mode-banner ${store.mode === "cloud" ? "cloud" : ""}"><span>${store.mode === "demo" ? "◉ DEMOSTRACIÓN · Datos ficticios guardados en este navegador" : "● CONECTADO · Cuenta única de UMEC"} </span>${store.mode === "demo" ? '<button data-action="logout">Salir de la demo</button>' : user.role === "admin" ? btn("Reservas web", "web-bookings", 'type="button"', "secondary") + btn("Solicitudes de acceso", "employee-requests", 'type="button"', "secondary") : ""}</div><main id="content" class="${page === "Planificación" ? "planning-page" : ""}"><div class="page-heading ${page === "Inicio" ? "home-heading" : ""}"><div><span class="eyebrow">${area === "Coordinación" ? "COORDINACIÓN DEL EQUIPO" : "UMEC GESTIÓN"}</span><h1 class="${page === "Inicio" ? "sr-only" : ""}">${page === "Inicio" ? "Resumen general" : page}</h1><p>${subtitle()}</p></div>${user.role === "admin" && page === "Planificación" ? `<div class="planning-header-actions">${btn("+ Crear servicio", "create-service")}${menuModuleEnabled("Clientes") ? `<div class="planning-client-actions">${btn(icons.Clientes + "<span>Clientes</span>", "coord-clients", "", "secondary")}${btn("+ Añadir cliente", "new-client", "", "secondary")}</div>` : ""}</div>` : user.role === "admin" && page === "Clientes" && area === "Coordinación" ? btn("Volver a Planificación", "coord", "", "secondary") : user.role === "admin" && page === "Cobros" ? btn('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6M6 17H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M6 14h12v7H6zM17 12h2"/></svg><span>Ver informe</span>', "view-payment-report", "", "secondary payment-report-button") : user.role === "admin" && ["Inicio", "Servicios"].includes(page) ? btn("+ Crear servicio", "create-service") : ""}</div>${body()}</main><footer>Una mano en casa <span>·</span> Gestión cercana, cada día.</footer></div></div>`;
   if (page === "Crear servicios" && editingServiceId && user.role === "admin") {
@@ -6453,6 +6463,7 @@ function subtitle() {
       "Tu calendario personal. Selecciona días para gestionar tu disponibilidad.",
     Servicios: "Consulta, organiza y sigue cada servicio.",
     Cobros: "Importes de los servicios y seguimiento de pagos.",
+    Informes: "Consulta, imprime y exporta los datos de tus servicios.",
     Ajustes: "Adapta UMEC Gestión a tu forma de trabajar.",
     Planificación: "Organiza servicios y disponibilidad de todo el equipo.",
     Empleados: "Personas, zonas y datos de contacto del equipo.",
@@ -6474,6 +6485,8 @@ function body() {
       return servicesView();
     case "Cobros":
       return payments();
+    case "Informes":
+      return reportsView();
     case "Empleados":
       return workersView();
     case "Ajustes":
@@ -7000,6 +7013,152 @@ function paymentServices() {
   return db.services.filter((s) => s.status !== "cancelado")
     .sort((a, b) => b.date.localeCompare(a.date) || b.start.localeCompare(a.start));
 }
+let reportsPeriod = "month";
+let reportsDate = today();
+
+function reportsRange(date, period) {
+  const [year, month] = date.split("-").map(Number);
+  const size = period === "year" ? 12 : period === "quarter" ? 3 : 1;
+  const startMonth = Math.floor((month - 1) / size) * size;
+  const iso = (m, day) => new Date(Date.UTC(year, m, day)).toISOString().slice(0, 10);
+  return { first: iso(startMonth, 1), last: iso(startMonth + size, 0) };
+}
+function reportPeriodServices() {
+  const { first, last } = reportsRange(reportsDate, reportsPeriod);
+  return paymentServices().filter(s => s.date >= first && s.date <= last);
+}
+function reportsView() {
+  if (user.role !== "admin") return "";
+  const rows = reportPeriodServices();
+  const { first, last } = reportsRange(reportsDate, reportsPeriod);
+  return `<div class="reports-layout">
+    <section class="card"><h2>Resumen de ingresos</h2>
+      <div class="form-grid"><label>Período<select id="reports-period">
+        ${[["month","Mes"],["quarter","Trimestre"],["year","Año"]].map(([value,label]) => `<option value="${value}" ${value === reportsPeriod ? "selected" : ""}>${label}</option>`).join("")}
+      </select></label><label>Fecha de referencia<input id="reports-date" type="date" min="1900-01-01" max="9999-12-31" value="${esc(reportsDate)}"></label></div>
+      <p class="hint">${esc(dateLabel(first))} – ${esc(dateLabel(last))} · ${rows.length} servicios</p>
+      ${paymentSummary(rows)}
+      <p class="hint">El período se calcula por fecha del servicio. «Cobrado» refleja su estado de pago actual.</p>
+    </section>
+    <section class="card"><h2>Informe de cobros</h2><p>Abre el informe del período para descargarlo o imprimirlo.</p>${btn("Ver informe", "view-payment-report", 'type="button"', "secondary")}</section>
+    <section class="card"><h2>Para la gestoría</h2><p>Descarga un Excel con el resumen de importes y el detalle de los servicios del período.</p>
+      <p class="hint">Exportación de gestión. No genera facturas ni libros fiscales.</p>
+      ${btn("Descargar Excel", "export-reports-xlsx", rows.length ? 'type="button"' : 'type="button" disabled', "secondary")}
+    </section>
+  </div>`;
+}
+function workbookZip(files) {
+  const encoder = new TextEncoder();
+  const blocks = [], directory = [];
+  const table = Uint32Array.from({length:256}, (_, value) => {
+    for (let bit = 0; bit < 8; bit++) value = value & 1 ? (value >>> 1) ^ 0xedb88320 : value >>> 1;
+    return value;
+  });
+  let offset = 0, directorySize = 0;
+  for (const [path, content] of Object.entries(files)) {
+    const name = encoder.encode(path), data = encoder.encode(content);
+    let crc = 0xffffffff;
+    for (const byte of data) crc = (crc >>> 8) ^ table[(crc ^ byte) & 255];
+    crc = (crc ^ 0xffffffff) >>> 0;
+
+    const local = new DataView(new ArrayBuffer(30));
+    local.setUint32(0, 0x04034b50, true);
+    local.setUint16(4, 20, true);
+    local.setUint16(12, 33, true);
+    local.setUint32(14, crc, true);
+    local.setUint32(18, data.length, true);
+    local.setUint32(22, data.length, true);
+    local.setUint16(26, name.length, true);
+    blocks.push(local.buffer, name, data);
+
+    const entry = new DataView(new ArrayBuffer(46));
+    entry.setUint32(0, 0x02014b50, true);
+    entry.setUint16(4, 20, true);
+    entry.setUint16(6, 20, true);
+    entry.setUint16(14, 33, true);
+    entry.setUint32(16, crc, true);
+    entry.setUint32(20, data.length, true);
+    entry.setUint32(24, data.length, true);
+    entry.setUint16(28, name.length, true);
+    entry.setUint32(42, offset, true);
+    directory.push(entry.buffer, name);
+    offset += 30 + name.length + data.length;
+    directorySize += 46 + name.length;
+  }
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true);
+  end.setUint16(8, directory.length / 2, true);
+  end.setUint16(10, directory.length / 2, true);
+  end.setUint32(12, directorySize, true);
+  end.setUint32(16, offset, true);
+  return new Blob([...blocks, ...directory, end.buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+}
+
+function reportsWorkbook(rows, period) {
+  const xml = value => String(value ?? "").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\ufffe\uffff]/g, "")
+    .replace(/[&<>]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[ch]);
+  const cell = (address, value, style = 0) => {
+    const attributes = ' r="' + address + '" s="' + style + '"';
+    if (typeof value === "number") return "<c" + attributes + "><v>" + value + "</v></c>";
+    return '<c' + attributes + ' t="inlineStr"><is><t xml:space="preserve">' + xml(value) + '</t></is></c>';
+  };
+  const formula = (address, expression, cached) => '<c r="' + address + '" s="2"><f>' + xml(expression) + '</f><v>' + cached + '</v></c>';
+  const line = (n, cells) => '<row r="' + n + '">' + cells.join("") + '</row>';
+  const sheet = (widths, lines, tableRange = "") => {
+    const cols = widths.map((width,i) => '<col min="' + (i+1) + '" max="' + (i+1) + '" width="' + width + '" customWidth="1"/>').join("");
+    const view = tableRange ? '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>' : "";
+    return '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' + view +
+      '<cols>' + cols + '</cols><sheetData>' + lines.join("") + '</sheetData>' +
+      (tableRange ? '<autoFilter ref="' + tableRange + '"/>' : "") + '</worksheet>';
+  };
+  const excelDate = value => Date.parse(value + "T00:00:00Z") / 86400000 + 25569;
+  const header = ["Referencia","Fecha del servicio","Cliente","Servicio","Importe EUR","Estado del cobro","Método de pago"];
+  const columns = "ABCDEFG";
+  let paid = 0, pending = 0;
+  const detail = [line(1, header.map((label,i) => cell(columns[i] + "1", label, 1)))];
+  rows.forEach((s,i) => {
+    const amount = Number(s.amount || 0), cents = Number.isFinite(amount) ? Math.round(amount * 100) : 0;
+    if (s.paid) paid += cents;
+    else pending += cents;
+    const values = [paymentReference(s), excelDate(s.date), client(s).name || "", s.title, cents/100,
+      s.paid ? "Cobrado" : "Pendiente", s.payment_method || "Sin indicar"];
+    detail.push(line(i+2, values.map((value,col) => cell(columns[col] + (i+2), value, col === 1 ? 3 : col === 4 ? 2 : 0))));
+  });
+  const last = Math.max(2, rows.length + 1);
+  const summary = [
+    line(1,[cell("A1","Resumen de servicios",1),cell("B1","EUR",1)]),
+    line(2,[cell("A2","Desde"),cell("B2",excelDate(period.first),3)]),
+    line(3,[cell("A3","Hasta"),cell("B3",excelDate(period.last),3)]),
+    line(4,[cell("A4","Servicios"),cell("B4",rows.length)]),
+    line(6,[cell("A6","Total de servicios"),formula("B6","SUM(Detalle!E2:E"+last+")",(paid+pending)/100)]),
+    line(7,[cell("A7","Cobrado"),formula("B7",'SUMIF(Detalle!F2:F'+last+',"Cobrado",Detalle!E2:E'+last+')',paid/100)]),
+    line(8,[cell("A8","Pendiente de cobro"),formula("B8",'SUMIF(Detalle!F2:F'+last+',"Pendiente",Detalle!E2:E'+last+')',pending/100)]),
+    line(10,[cell("A10","Período por fecha de servicio. Los estados reflejan la situación al exportar.")]),
+  ];
+  return workbookZip({
+    "[Content_Types].xml": '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>',
+    "_rels/.rels": '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>',
+    "xl/workbook.xml": '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView/></bookViews><sheets><sheet name="Resumen" sheetId="1" r:id="rId1"/><sheet name="Detalle" sheetId="2" r:id="rId2"/></sheets></workbook>',
+    "xl/_rels/workbook.xml.rels": '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>',
+    "xl/styles.xml": '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="2"><numFmt numFmtId="164" formatCode="#,##0.00 &quot;€&quot;"/><numFmt numFmtId="165" formatCode="dd/mm/yyyy"/></numFmts><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><color rgb="FFFFFFFF"/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF155B69"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="165" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>',
+    "xl/worksheets/sheet1.xml": sheet([28,21], summary),
+    "xl/worksheets/sheet2.xml": sheet([21,21,36,42,18,23,23], detail, "A1:G"+last),
+  });
+}
+
+function exportReportsWorkbook() {
+  const rows = reportPeriodServices();
+  if (user.role !== "admin" || !rows.length) return;
+  const period = reportsRange(reportsDate, reportsPeriod);
+  const url = URL.createObjectURL(reportsWorkbook(rows, period));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "UMEC-gestoria-" + period.first + "--" + period.last + ".xlsx";
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 function paymentSummary(list, className = "stats") {
   const total = (entries) => entries.reduce((amount, entry) => amount + Number(entry.amount || 0), 0);
   return `<div class="${className}"><article><span>Total de servicios</span><b>${euro(total(list))}</b></article><article><span>Cobrado</span><b>${euro(total(list.filter((s) => s.paid)))}</b></article><article><span>Pendiente</span><b>${euro(total(list.filter((s) => !s.paid)))}</b></article></div>`;
@@ -7106,8 +7265,8 @@ const paymentReportModes = {
   pending: "Solo pendientes de cobro",
   paid: "Solo servicios cobrados",
 };
-function paymentReport(mode = "all", includeIndex = false) {
-  const list = paymentServices().filter((s) =>
+function paymentReport(mode = "all", includeIndex = false, services = paymentServices()) {
+  const list = services.filter((s) =>
     mode === "all" || (mode === "paid" ? s.paid : !s.paid)
   );
   const first = list.at(-1)?.date;
@@ -7128,7 +7287,7 @@ function paymentReport(mode = "all", includeIndex = false) {
   </article>`;
 }
 function showPaymentReport() {
-  dialog("Vista previa del informe", `${paymentReport()}<div class="form-actions">
+  dialog("Vista previa del informe", `${paymentReport("all", false, page === "Informes" ? reportPeriodServices() : undefined)}<div class="form-actions">
     <label class="report-index-option"><input type="checkbox" id="payment-include-index"> Incluir índice interno (número y nombre)</label>
     ${btn("Descargar informe", "download-payment-report", "", "secondary")}
     ${btn("Imprimir", "print-payment-report")}
@@ -7139,7 +7298,7 @@ function showPaymentReport() {
   </div>`, "payment-report-dialog");
 }
 function selectedPaymentReport() {
-  return paymentReport($("#payment-print-mode")?.value || "all", $("#payment-include-index")?.checked === true);
+  return paymentReport($("#payment-print-mode")?.value || "all", $("#payment-include-index")?.checked === true, page === "Informes" ? reportPeriodServices() : undefined);
 }
 function refreshPaymentReport() {
   $(".payment-report-dialog .report-paper").outerHTML = selectedPaymentReport();
@@ -7843,6 +8002,9 @@ document.addEventListener("click", (e) => {
         $("#payment-results").innerHTML = paymentResults();
         ($("#payment-results [data-action='" + action + "']:not(:disabled)") ||
           $("#payment-results nav button:not(:disabled)"))?.focus();
+        break;
+      case "export-reports-xlsx":
+        exportReportsWorkbook();
         break;
       case "view-payment-report":
         if (user.role === "admin") showPaymentReport();
@@ -8591,6 +8753,12 @@ document.addEventListener("change", (e) => {
   if (e.target.closest("#appearance-form")) previewAppearance(e.target);
   const id = e.target.id;
   if (id === "payment-print-mode" || id === "payment-include-index") refreshPaymentReport();
+  if (id === "reports-period" || id === "reports-date") {
+    if (id === "reports-period") reportsPeriod = e.target.value;
+    else if (e.target.value && e.target.validity.valid) reportsDate = e.target.value;
+    render();
+    $("#" + id)?.focus({ preventScroll: true });
+  }
   if (id === "payment-filter") {
     filter = e.target.value;
     paymentPage = 0;

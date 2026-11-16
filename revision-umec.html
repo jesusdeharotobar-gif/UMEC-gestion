@@ -8,7 +8,7 @@
     <meta name="theme-color" content="#155b69" />
     <link rel="icon" type="image/png" sizes="32x32" href="umec-v2-icon-32.png">
     <link rel="apple-touch-icon" sizes="192x192" href="umec-v2-icon-192.png">
-    <title>UMEC Gestión · Revisión v2.2.21</title>
+    <title>UMEC Gestión · Revisión v2.2.22</title>
     <style>:root {
   --accent: #155b69;
   --ink: #203c44;
@@ -2724,7 +2724,7 @@ textarea {
 .home-heading > .primary {
   margin-top: 0;
 }
-@media (min-width: 801px), screen and (orientation: landscape) and (min-width: 500px) and (max-width: 1050px) and (max-height: 500px) {
+@media (min-width: 801px), screen and (orientation: landscape) and (min-width: 500px) and (max-width: 1200px) and (max-height: 600px) {
   .menu-toggle {
     display: inline-flex;
     align-items: center;
@@ -2773,7 +2773,7 @@ textarea {
   }
 }
 
-@media (min-width: 801px), screen and (orientation: landscape) and (min-width: 500px) and (max-width: 1050px) and (max-height: 500px) {
+@media (min-width: 801px), screen and (orientation: landscape) and (min-width: 500px) and (max-width: 1200px) and (max-height: 600px) {
   .sidebar > .menu-toggle {
     align-self: flex-end;
     flex-shrink: 0;
@@ -3642,7 +3642,7 @@ textarea {
 .planning-day-mode .planning-period-day > .cal-day {
   min-height: 70px;
 }
-@media (min-width: 801px), screen and (orientation: landscape) and (min-width: 500px) and (max-width: 1050px) and (max-height: 500px) {
+@media (min-width: 801px), screen and (orientation: landscape) and (min-width: 500px) and (max-width: 1200px) and (max-height: 600px) {
   #content.planning-page {
     padding: 14px 20px 12px;
     max-width: 1800px;
@@ -3856,7 +3856,7 @@ textarea {
   }
 }
 
-@media (min-width: 801px), screen and (orientation: landscape) and (min-width: 500px) and (max-width: 1050px) and (max-height: 500px) {
+@media (min-width: 801px), screen and (orientation: landscape) and (min-width: 500px) and (max-width: 1200px) and (max-height: 600px) {
   .planning-calendar .daily {
     max-height: calc(100dvh - 250px);
   }
@@ -3865,7 +3865,7 @@ textarea {
   }
 }
 
-@media (min-width: 801px), screen and (orientation: landscape) and (min-width: 500px) and (max-width: 1050px) and (max-height: 500px) {
+@media (min-width: 801px), screen and (orientation: landscape) and (min-width: 500px) and (max-width: 1200px) and (max-height: 600px) {
   .planning-month-mode .cal-day {
     padding: 2px 4px;
   }
@@ -5150,7 +5150,7 @@ button.secondary.delete-client:hover { background:#fff3f4; }
 .area-tab-icon svg { width: 13px; height: 13px; }
 </style>
 <style>
-@media screen and (orientation: landscape) and (min-width: 500px) and (max-width: 1050px) and (max-height: 500px) {
+@media screen and (orientation: landscape) and (min-width: 500px) and (max-width: 1200px) and (max-height: 600px) {
   .shell { --landscape-sidebar-width: clamp(110px, 19vw, 150px); }
   .shell > .sidebar {
     width: var(--landscape-sidebar-width);
@@ -5209,6 +5209,31 @@ button.secondary.delete-client:hover { background:#fff3f4; }
   .workspace .payment-toolbar { gap: 5px; }
   .workspace .form-card .form-grid { gap: 6px; }
   .workspace .form-card label { margin-bottom: 6px; }
+}
+</style>
+<style>
+@media screen and (orientation: landscape) and (min-width: 500px) and (max-width: 1200px) and (max-height: 600px) {
+  .admin-shell #content.planning-page { padding: 4px 6px; }
+  .admin-shell .planning-page .page-heading { margin-bottom: 4px; align-items: center; flex-wrap: nowrap; }
+  .admin-shell .planning-page .page-heading .eyebrow,
+  .admin-shell .planning-page .page-heading p { display: none; }
+  .admin-shell .planning-page .page-heading h1 { font-size: 18px; }
+  .admin-shell .planning-header-actions { width: auto; gap: 4px; }
+  .admin-shell .planning-header-actions button { min-height: 30px; padding: 3px 6px; font-size: 10px; }
+  .admin-shell .planning-toolbar { display: grid; grid-template-columns: minmax(0,1fr) auto minmax(100px,150px); gap: 5px; margin-bottom: 4px; }
+  .admin-shell .planning-toolbar > * { grid-area: auto; width: auto; margin: 0; }
+  .admin-shell .planning-toolbar .month-picker { gap: 4px; }
+  .admin-shell .planning-toolbar .month-picker h2 { font-size: 13px; min-width: 0; }
+  .admin-shell .planning-toolbar select { padding: 3px; margin-top: 0; height: 30px; font-size: 11px; }
+  .admin-shell .planning-calendar .calendar-card { padding: 4px; }
+  .admin-shell .planning-calendar .planning-week-grid { min-width: 0; grid-template-columns: repeat(7,minmax(0,1fr)); gap: 3px; }
+  .admin-shell .planning-week-grid .planning-period-day > .cal-day { height: 54px; padding: 2px; }
+  .admin-shell .planning-week-grid .day-number { font-size: 12px; }
+  .admin-shell .planning-week-grid .vertical-timeline { --hour-height: 17px; --time-gutter: 26px; }
+  .admin-shell .planning-calendar .calendar-legend { margin-block: 3px; gap: 3px 7px; font-size: 9px; }
+  .admin-shell .planning-month-mode .cal-day { min-height: 30px; padding: 2px; }
+  .admin-shell .planning-week-controls { margin-bottom: 3px; gap: 4px; }
+  .admin-shell .planning-week-controls button { min-height: 28px; padding: 3px 5px; font-size: 10px; }
 }
 </style>
 </head>
@@ -6691,7 +6716,7 @@ function login(message = "") {
         </div>
         <section class="access-card" aria-labelledby="access-title">
           <h1 id="access-title">Revisión de UMEC V2</h1>
-          <p class="access-intro">Versión 2.2.21 · Datos de ejemplo</p>
+          <p class="access-intro">Versión 2.2.22 · Datos de ejemplo</p>
           <p id="login-feedback" class="login-feedback" role="status">${esc(message)}</p>
             <div class="demo-options">
               ${btn("Demo administrador", "demo-admin", 'type="button"', "secondary full")}
@@ -8432,7 +8457,7 @@ document.addEventListener("click", (e) => {
         refreshAppLogo("Logo original restaurado.");
         break;
       case "toggle-menu":
-        if (!window.matchMedia("(min-width: 801px), (orientation: landscape) and (min-width: 500px) and (max-width: 1050px) and (max-height: 500px)").matches) break;
+        if (!window.matchMedia("(min-width: 801px), (orientation: landscape) and (min-width: 500px) and (max-width: 1200px) and (max-height: 600px)").matches) break;
         menuCollapsed = !menuCollapsed;
         reviewLocal.setItem("umec-menu-collapsed", String(menuCollapsed));
         document

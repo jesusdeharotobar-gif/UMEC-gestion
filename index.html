@@ -7,7 +7,7 @@
     <link rel="manifest" href="umec-v2.webmanifest?v=503">
     <link rel="icon" type="image/png" sizes="32x32" href="umec-v2-icon-32.png">
     <link rel="apple-touch-icon" sizes="192x192" href="umec-v2-icon-192.png">
-    <title>UMEC Gestión · UMEC V2 v2.2.8</title>
+    <title>UMEC Gestión · UMEC V2 v2.2.20</title>
     <style>:root {
   --accent: #155b69;
   --ink: #203c44;
@@ -2752,7 +2752,7 @@ textarea {
   }
   .shell.menu-collapsed .brand > span,
   .shell.menu-collapsed .nav-caption,
-  .shell.menu-collapsed .nav-label {
+  .shell.menu-collapsed .sidebar .nav-label {
     display: none;
   }
   .shell.menu-collapsed .sidebar nav {
@@ -4836,8 +4836,317 @@ button.secondary.delete-client:hover { background:#fff3f4; }
 .reports-layout h2 { margin-top:0; }
 @media(max-width:620px) {
   .reports-layout { grid-template-columns:1fr; }
-  .workspace .topbar .area-tabs:has(button:nth-child(5)) { grid-template-columns:repeat(3,minmax(0,1fr)); grid-auto-flow:row; }
 }
+</style>
+<style>
+@media (max-width: 620px) {
+  .workspace .topbar .area-tabs:has(> button:nth-child(5):last-child) {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-auto-flow: row;
+    gap: 5px;
+  }
+  .workspace .topbar .area-tabs:has(> button:nth-child(5):last-child) > button {
+    grid-column: span 2;
+    padding-inline: 3px;
+    white-space: nowrap;
+  }
+  .workspace .topbar .area-tabs:has(> button:nth-child(5):last-child) > button:nth-child(n + 4) {
+    grid-column: span 3;
+  }
+}
+</style>
+<style>
+.admin-area-menu { display: none; }
+@media (max-width: 800px) {
+  .admin-shell .workspace .topbar { grid-template-rows: auto; }
+  .admin-shell .workspace .topbar-navigation {
+    display: flex;
+    grid-area: 1 / 1;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .admin-shell .workspace .topbar .team-logo {
+    width: clamp(36px, 12vw, 72px);
+    height: 36px;
+    flex: none;
+  }
+  .admin-shell .workspace .topbar .area-tabs,
+  .admin-shell .workspace .topbar .account-name { display: none; }
+  .admin-area-menu { display: block; position: relative; min-width: 0; }
+  .admin-area-menu summary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    padding: 0 8px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface-2);
+    color: var(--ink);
+    cursor: pointer;
+    list-style: none;
+  }
+  .admin-area-menu summary::-webkit-details-marker { display: none; }
+  .admin-area-menu summary svg { flex: none; }
+  .admin-area-menu summary b {
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .admin-area-menu nav {
+    position: absolute;
+    z-index: 20;
+    inset: calc(100% + 4px) auto auto 0;
+    width: 172px;
+    padding: 4px;
+    display: grid;
+    gap: 2px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface-solid);
+    box-shadow: 0 10px 24px #203c4426;
+  }
+  .admin-area-menu nav button {
+    min-height: 44px;
+    padding: 6px 10px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--ink);
+    text-align: left;
+  }
+  .admin-area-menu nav button.active {
+    background: var(--accent);
+    color: var(--on-accent);
+    font-weight: 700;
+  }
+  .admin-home .home-heading { margin-bottom: 8px; }
+  .admin-home .home-heading :is(.eyebrow, p) { display: none; }
+  .admin-home .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .admin-home .stats > button { min-height: 58px; padding: 6px 8px; }
+  .admin-home .stats > button > b { margin: 2px 0 0; font-size: 19px; }
+  .admin-home .stats > button > small { display: none; }
+  .admin-home .dashboard-grid { grid-template-columns: minmax(0, 1fr); }
+  .admin-home .dashboard-grid .card { padding: 8px 10px; }
+  .admin-home .dashboard-grid .section-heading { margin-bottom: 3px; }
+  .admin-home .dashboard-grid h2 { font-size: 16px; }
+  .admin-home .dashboard-grid .service-row { padding-block: 6px; }
+  .admin-home .dashboard-grid .empty { padding: 12px 0; }
+  .admin-home .dashboard-grid .empty > span { display: none; }
+}
+</style>
+<style>
+/* Compact spacing for the administrator on narrow screens. */
+@media screen and (max-width: 800px) {
+  .admin-shell .workspace .topbar { padding: 4px 10px; }
+  .admin-shell .mode-banner { padding: 4px 10px; gap: 3px 8px; flex-wrap: wrap; }
+  .admin-shell > .workspace > #content { padding: 10px 10px 6px; }
+  .admin-shell #content .page-heading { gap: 6px; margin-bottom: 10px; }
+  .admin-shell #content .page-heading .eyebrow { margin-bottom: 2px; }
+  .admin-shell #content .page-heading h1 { font-size: 22px; line-height: 1.15; }
+  .admin-shell #content .page-heading p { margin: 2px 0 0; line-height: 1.35; }
+  .admin-shell #content .page-heading > .primary { margin-top: 0; }
+  .admin-shell #content.admin-home .home-heading { margin: 0; }
+  .admin-shell #content .card { padding: 8px 10px; }
+  .admin-shell #content .card h2 { font-size: 16px; }
+  .admin-shell #content .section-heading { gap: 8px; margin-bottom: 4px; }
+  .admin-shell #content .empty { padding: 12px 8px; }
+  .admin-shell #content .toolbar { gap: 6px; margin-bottom: 8px; }
+  .admin-shell #content .toolbar label { min-width: 0; }
+  .admin-shell #content .toolbar p { margin-block: 0; }
+  .admin-shell #content .toolbar button { min-height: 44px; }
+  .admin-shell #content .stats { gap: 6px; margin-bottom: 8px; }
+  .admin-shell #content .stats > :is(article, button) { padding: 5px 8px; }
+  .admin-shell #content .stats > :is(article, button) > b {
+    font-size: 18px;
+    margin: 2px 0;
+    line-height: 1.15;
+  }
+  .admin-shell #content.admin-home .service-row,
+  .admin-shell #content .clients-list .client-row,
+  .admin-shell #content .list-card .service-row,
+  .admin-shell #content .payment-row { padding-block: 6px; }
+  .admin-shell #content .service-row { gap: 8px; }
+  .admin-shell #content .service-main { min-width: 0; overflow-wrap: anywhere; }
+  .admin-shell #content .form-grid,
+  .admin-shell #content .form-actions,
+  .admin-shell #content .form-card,
+  .admin-shell #content .employee-grid,
+  .admin-shell #content .settings-list,
+  .admin-shell #content .reports-layout,
+  .admin-shell #content .calendar-layout { gap: 8px; }
+  .admin-shell #content .form-card label { margin-block: 4px; }
+  .admin-shell #content .form-section-title { gap: 6px; margin-bottom: 6px; }
+  .admin-shell #content .form-section-title p,
+  .admin-shell #content .reports-layout p { margin-block: 3px 5px; line-height: 1.4; }
+  .admin-shell #content .settings-group h2 { margin-bottom: 4px; }
+  .admin-shell #content .settings-group > details { margin-block: 4px; }
+  .admin-shell #content .settings-group summary { min-height: 44px; padding-block: 5px; }
+  .admin-shell #content .calendar-weekdays { margin-bottom: 3px; }
+  .admin-shell #content .calendar-legend { gap: 4px 8px; margin-block: 5px; }
+  .admin-shell #content .planning-header-actions:empty { display: none; }
+  .admin-shell #content .planning-calendar .daily { padding: 8px 10px; }
+  .admin-shell #content .personal-calendar .cal-day,
+  .admin-shell #content .planning-month-mode .cal-day { min-height: 44px; padding: 3px; }
+  .admin-shell #content .reports-layout .form-grid,
+  .admin-shell #content .payment-toolbar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .admin-shell #content .payment-toolbar label:first-child { margin-inline-end: 0; }
+  .admin-shell #content .payment-toolbar :is(input, select),
+  .admin-shell #content .reports-layout :is(input, select) { width: 100%; min-width: 0; }
+}
+</style>
+<style>
+@media screen and (max-width: 800px) {
+  .admin-shell #content { font-size: 13px; }
+  .admin-shell #content .page-heading h1 { font-size: 20px; }
+  .admin-shell #content .card h2 { font-size: 15px; }
+  .admin-shell #content .stats > :is(article, button) > b { font-size: 16px; }
+  .admin-shell #content .stats > :is(article, button) > span { font-size: 11px; }
+  .admin-shell #content .stats > button { min-height: 46px; }
+  .admin-shell #content :is(button.primary, button.secondary, button.text),
+  body:has(.admin-shell) dialog :is(button.primary, button.secondary, button.text) {
+    min-height: 36px;
+    padding: 5px 8px;
+    font-size: 12px;
+  }
+  .admin-shell #content label,
+  body:has(.admin-shell) dialog label { font-size: 11px; margin-bottom: 6px; }
+  .admin-shell #content :is(input, select, textarea):not([type=checkbox], [type=radio], [type=range], [type=color]),
+  body:has(.admin-shell) dialog :is(input, select, textarea):not([type=checkbox], [type=radio], [type=range], [type=color]) {
+    padding: 5px 7px;
+    margin-top: 3px;
+    font-size: 13px;
+    min-height: 34px;
+  }
+  .admin-shell #content input[type=search] { margin-top: 0; }
+  .admin-shell #content .toolbar:has(+ .clients-list) { flex-wrap: nowrap; }
+  .admin-shell #content .toolbar:has(+ .clients-list) .search { flex: 1 1 0; }
+  .admin-shell #content .toolbar:has(+ .clients-list) button { flex: none; white-space: nowrap; }
+  .admin-shell #content .clients-list > .hint { margin: 0 0 3px; }
+  .admin-shell #content .clients-list .client-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 2px 8px;
+    padding-block: 5px;
+    line-height: 1.25;
+  }
+  .admin-shell #content .client-row small { font-size: 11px; margin-top: 1px; }
+  .admin-shell #content .client-row > button { grid-area: 1 / 2; }
+  .admin-shell #content .client-row > p { grid-area: 2 / 1; line-height: 1.25; font-size: 11px; }
+  .admin-shell #content .client-row > a { grid-area: 2 / 2; font-size: 11px; padding-block: 4px; }
+  .admin-shell #service-form { padding: 7px 8px; }
+  .admin-shell #service-form > :is(.service-customer, .service-scheduling, .service-billing, .service-real-time) { margin-block: 4px; }
+  .admin-shell #service-form .form-section-title { margin: 3px 0 5px; }
+  .admin-shell #service-form .form-section-title > span { padding: 4px 5px; font-size: 10px; }
+  .admin-shell #service-form .form-grid { gap: 4px 7px; }
+  .admin-shell #service-form :is(.hint, .end-time-help p) { margin: 3px 0; line-height: 1.3; }
+  .admin-shell #service-form .availability-guide { padding: 6px; }
+  .admin-shell #service-form .form-actions { margin-top: 6px; }
+  body:has(.admin-shell) dialog { padding: 10px; }
+  body:has(.admin-shell) dialog .dialog-heading { margin-bottom: 6px; }
+}
+</style>
+<style>
+.availability-toggle { display: none; }
+@media screen and (max-width: 800px) {
+  .admin-shell .workspace .topbar { padding: 3px 8px; gap: 6px; }
+  .admin-shell .workspace .topbar:has(.admin-area-menu[open]) {
+    position: relative;
+    z-index: 24;
+  }
+  .admin-shell:has(.admin-area-menu[open]) #content .toolbar:has(+ .clients-list) {
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .admin-shell .workspace .topbar-navigation { gap: 5px; }
+  .admin-shell .workspace .topbar .team-logo { height: 30px; }
+  .admin-shell .workspace .topbar :is(.admin-area-menu, .account-menu) summary {
+    min-height: 36px;
+    padding: 2px 6px;
+    gap: 4px;
+    border-radius: 8px;
+  }
+  .admin-shell .admin-area-menu summary b { font-size: 12px; }
+  .admin-shell .admin-area-menu nav { max-height: 65dvh; overflow-y: auto; }
+  .admin-shell .admin-area-menu nav button { min-height: 37px; font-size: 12px; }
+  .admin-shell > .sidebar { padding: 3px 4px calc(3px + env(safe-area-inset-bottom)); }
+  .admin-shell > .sidebar .nav-item {
+    min-height: 43px;
+    grid-template-rows: 17px auto;
+    gap: 2px;
+    font-size: clamp(8px, 2.55vw, 10px);
+  }
+  .admin-shell > .sidebar .nav-item > [aria-hidden="true"],
+  .admin-shell > .sidebar .nav-item > [aria-hidden="true"] svg { width: 17px; height: 17px; }
+  .admin-shell:has(> .sidebar) > .workspace { padding-bottom: calc(53px + env(safe-area-inset-bottom)); }
+  .admin-shell #content .employee-toolbar { justify-content: space-between; align-items: center; }
+  .admin-shell #content .employee-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    padding-inline: 8px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface-solid);
+  }
+  .admin-shell #content .employee-grid:empty { display: none; }
+  .admin-shell #content .employee-grid > .employee-card {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 2px 8px;
+    padding: 5px 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+  .admin-shell #content .employee-grid > .employee-card + .employee-card { border-top: 1px solid var(--line); }
+  .admin-shell .employee-heading { grid-area: 1 / 1; }
+  .admin-shell .employee-heading .person-avatar { display: none; }
+  .admin-shell #content .employee-heading h2 { font-size: 13px; line-height: 1.2; }
+  .admin-shell .employee-card small { display: block; font-size: 10px; line-height: 1.2; }
+  .admin-shell .employee-card .tags { grid-area: 2 / 1; gap: 2px; }
+  .admin-shell .employee-card .tags:empty { display: none; }
+  .admin-shell .employee-card .tags span { padding: 0 4px; font-size: 10px; }
+  .admin-shell .employee-card > small { grid-area: 2 / 2; text-align: right; }
+  .admin-shell .employee-card .employee-profile { grid-area: 1 / 2; justify-self: end; }
+  .admin-shell #service-form .availability-guide { margin: 5px 0; padding: 0 6px; }
+  .admin-shell #service-form .availability-guide > h3 { display: none; }
+  .admin-shell #service-form .availability-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    text-align: left;
+  }
+  .admin-shell .availability-toggle[aria-expanded="false"] + #availability-guide-body { display: none; }
+  .admin-shell #content .reports-layout { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-shell #content :is(.reports-layout .stats, .payment-summary) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+  }
+  .admin-shell #content :is(.reports-layout .stats, .payment-summary) > article { min-width: 0; padding: 4px; }
+  .admin-shell #content :is(.reports-layout .stats, .payment-summary) b { font-size: 14px; overflow-wrap: anywhere; }
+  .admin-shell #content .planning-header-actions { gap: 4px; }
+  .admin-shell #content .planning-header-actions button { padding: 4px 6px; font-size: 11px; }
+}
+</style>
+<style>
+.area-tabs button, .admin-area-menu nav button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.area-tabs button { justify-content: center; }
+.area-tab-icon { display: inline-flex; flex: none; }
+.area-tab-icon svg { width: 13px; height: 13px; }
 </style>
 </head>
   <body>
@@ -5928,6 +6237,9 @@ const icons = {
   Planificación: menuIcon(
     '<path d="M12 20H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v4M7 2v4M14 2v4M3 9h15M7 13h.01M11 13h.01M7 17h.01"/><circle cx="17.5" cy="17.5" r="4.5"/><path d="M17.5 15v2.5l1.5 1"/>',
   ),
+  Informes: menuIcon(
+    '<path d="M6 3h8l4 4v14H6zM14 3v5h4M9 17v-2m3 2v-4m3 4v-6"/>',
+  ),
   Empleados: menuIcon(
     '<path d="M9 5H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-4"/><rect x="10" y="2" width="4" height="5" rx="1"/><circle cx="12" cy="11" r="2.3"/><path d="M7.5 18a4.5 3.5 0 0 1 9 0"/>',
   ),
@@ -6358,14 +6670,21 @@ function render() {
   const teamArea = area === "Coordinación" || ["Cobros", "Informes"].includes(page);
   const topTabs = [
     "Mi gestión",
+    ...(user.role === "admin" && menuModuleEnabled("Clientes") ? ["Clientes"] : []),
     ...(user.role === "admin" && menuModuleEnabled("Coordinación") ? ["Coordinación"] : []),
     ...(user.role === "admin" && menuModuleEnabled("Cobros") ? ["Cobros"] : []),
     ...(user.role === "admin" && menuModuleEnabled("Empleados") ? ["Empleados"] : []),
     ...(user.role === "admin" ? ["Informes"] : []),
   ];
-  const currentTab = ["Empleados", "Cobros", "Informes"].includes(page) ? page : area;
+  const currentTab = topTabs.includes(page) ? page : area;
+  const admin = user.role === "admin";
+  const adminHome = admin && page === "Inicio";
+  const areaLabel = (tab) => tab === "Mi gestión" ? "Inicio" : tab;
+  const areaIcon = (tab) => icons[tab === "Coordinación" ? "Planificación" : areaLabel(tab)];
+  const renderAreaButtons = (tabs, selectedTab) => tabs.map((tab) => `<button type="button" data-area="${tab}" class="${selectedTab === tab ? "active" : ""}" aria-current="${selectedTab === tab ? "page" : "false"}"><span class="area-tab-icon" aria-hidden="true">${areaIcon(tab)}</span><span>${areaLabel(tab)}</span></button>`).join("");
+  const areaButtons = renderAreaButtons(topTabs, currentTab);
   $("#app").innerHTML =
-    `<div class="shell ${teamArea ? "team-area" : ""} ${menuCollapsed ? "menu-collapsed" : ""}">${teamArea ? "" : `<aside class="sidebar" id="main-menu"><a class="brand" href="#" data-action="home"><img src="${currentAppLogo()}" alt="UMEC Gestión"><span>UNA MANO EN CASA</span></a><p class="nav-caption">${area === "Coordinación" ? "ORGANIZAR EL EQUIPO" : "MI ESPACIO"}</p><nav aria-label="Menú principal">${nav.filter((n) => user.role !== "admin" || menuModuleEnabled(n)).map((n) => `<button data-page="${n}" class="nav-item ${n === page ? "current" : ""}" aria-label="${n === "Agenda" ? "Mi Agenda" : n}" title="${n === "Agenda" ? "Mi Agenda" : n}"><span aria-hidden="true">${icons[n]}</span><span class="nav-label">${n === "Crear servicios" ? '<span class="nav-label-full">Crear servicios</span><span class="nav-label-short" aria-hidden="true">Crear</span>' : n === "Agenda" ? '<span class="my-agenda-word" aria-hidden="true"><span class="my-agenda-ink">Mi</span></span><span class="my-agenda-title">Agenda</span>' : n}</span></button>`).join("")}</nav><button type="button" class="menu-toggle secondary" data-action="toggle-menu" aria-label="${menuCollapsed ? "Expandir menú" : "Recoger menú"}" title="${menuCollapsed ? "Expandir menú" : "Recoger menú"}" aria-expanded="${!menuCollapsed}" aria-controls="main-menu"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 6 8 12l6 6"/></svg></button></aside>`}<div class="workspace"><header class="topbar"><div class="topbar-navigation"><img class="team-logo ${teamArea ? "" : "mobile-header-logo"}" src="${currentAppLogo()}" alt="UMEC Gestión"><div class="area-tabs" role="group" aria-label="Área de trabajo">${topTabs.map((a) => `<button data-area="${a}" class="${currentTab === a ? "active" : ""}" aria-current="${currentTab === a ? "page" : "false"}">${a}</button>`).join("")}</div></div>${accountMenu()}</header><div class="mode-banner ${store.mode === "cloud" ? "cloud" : ""}"><span>${store.mode === "demo" ? "◉ DEMOSTRACIÓN · Datos ficticios guardados en este navegador" : "● CONECTADO · Cuenta única de UMEC"} </span>${store.mode === "demo" ? '<button data-action="logout">Salir de la demo</button>' : user.role === "admin" ? btn("Reservas web", "web-bookings", 'type="button"', "secondary") + btn("Solicitudes de acceso", "employee-requests", 'type="button"', "secondary") : ""}</div><main id="content" class="${page === "Planificación" ? "planning-page" : ""}"><div class="page-heading ${page === "Inicio" ? "home-heading" : ""}"><div><span class="eyebrow">${area === "Coordinación" ? "COORDINACIÓN DEL EQUIPO" : "UMEC GESTIÓN"}</span><h1 class="${page === "Inicio" ? "sr-only" : ""}">${page === "Inicio" ? "Resumen general" : page}</h1><p>${subtitle()}</p></div>${user.role === "admin" && page === "Planificación" ? `<div class="planning-header-actions">${btn("+ Crear servicio", "create-service")}${menuModuleEnabled("Clientes") ? `<div class="planning-client-actions">${btn(icons.Clientes + "<span>Clientes</span>", "coord-clients", "", "secondary")}${btn("+ Añadir cliente", "new-client", "", "secondary")}</div>` : ""}</div>` : user.role === "admin" && page === "Clientes" && area === "Coordinación" ? btn("Volver a Planificación", "coord", "", "secondary") : user.role === "admin" && page === "Cobros" ? btn('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6M6 17H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M6 14h12v7H6zM17 12h2"/></svg><span>Ver informe</span>', "view-payment-report", "", "secondary payment-report-button") : user.role === "admin" && ["Inicio", "Servicios"].includes(page) ? btn("+ Crear servicio", "create-service") : ""}</div>${body()}</main><footer>Una mano en casa <span>·</span> Gestión cercana, cada día.</footer></div></div>`;
+    `<div class="shell ${admin ? "admin-shell" : ""} ${teamArea ? "team-area" : ""} ${menuCollapsed ? "menu-collapsed" : ""}">${teamArea ? "" : `<aside class="sidebar" id="main-menu"><a class="brand" href="#" data-action="home"><img src="${currentAppLogo()}" alt="UMEC Gestión"><span>UNA MANO EN CASA</span></a><p class="nav-caption">${area === "Coordinación" ? "ORGANIZAR EL EQUIPO" : "MI ESPACIO"}</p><nav aria-label="Menú principal">${nav.filter((n) => user.role !== "admin" || menuModuleEnabled(n)).map((n) => `<button data-page="${n}" class="nav-item ${n === page ? "current" : ""}" aria-label="${n === "Agenda" ? "Mi Agenda" : n}" title="${n === "Agenda" ? "Mi Agenda" : n}"><span aria-hidden="true">${icons[n]}</span><span class="nav-label">${n === "Crear servicios" ? '<span class="nav-label-full">Crear servicios</span><span class="nav-label-short" aria-hidden="true">Crear</span>' : n === "Agenda" ? '<span class="my-agenda-word" aria-hidden="true"><span class="my-agenda-ink">Mi</span></span><span class="my-agenda-title">Agenda</span>' : n}</span></button>`).join("")}</nav><button type="button" class="menu-toggle secondary" data-action="toggle-menu" aria-label="${menuCollapsed ? "Expandir menú" : "Recoger menú"}" title="${menuCollapsed ? "Expandir menú" : "Recoger menú"}" aria-expanded="${!menuCollapsed}" aria-controls="main-menu"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 6 8 12l6 6"/></svg></button></aside>`}<div class="workspace"><header class="topbar"><div class="topbar-navigation"><img class="team-logo ${teamArea ? "" : "mobile-header-logo"}" src="${currentAppLogo()}" alt="UMEC Gestión"><div class="area-tabs" role="group" aria-label="Área de trabajo">${areaButtons}</div>${admin ? `<details class="admin-area-menu"><summary><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span class="sr-only">Cambiar de sección: </span><b>${areaLabel(currentTab)}</b><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><nav aria-label="Secciones de administración">${areaButtons}</nav></details>` : ""}</div>${accountMenu()}</header><div class="mode-banner ${store.mode === "cloud" ? "cloud" : ""}"><span>${store.mode === "demo" ? "◉ DEMOSTRACIÓN · Datos ficticios guardados en este navegador" : "● CONECTADO · Cuenta única de UMEC"} </span>${store.mode === "demo" ? '<button data-action="logout">Salir de la demo</button>' : user.role === "admin" ? btn("Reservas web", "web-bookings", 'type="button"', "secondary") + btn("Solicitudes de acceso", "employee-requests", 'type="button"', "secondary") : ""}</div><main id="content" class="${adminHome ? "admin-home" : page === "Planificación" ? "planning-page" : ""}"><div class="page-heading ${page === "Inicio" ? "home-heading" : ""}"><div><span class="eyebrow">${area === "Coordinación" ? "COORDINACIÓN DEL EQUIPO" : "UMEC GESTIÓN"}</span><h1 class="${page === "Inicio" ? "sr-only" : ""}">${page === "Inicio" ? "Resumen general" : page}</h1><p>${subtitle()}</p></div>${user.role === "admin" && page === "Planificación" ? `<div class="planning-header-actions">${btn("+ Crear servicio", "create-service")}${menuModuleEnabled("Clientes") ? `<div class="planning-client-actions">${btn(icons.Clientes + "<span>Clientes</span>", "coord-clients", "", "secondary")}${btn("+ Añadir cliente", "new-client", "", "secondary")}</div>` : ""}</div>` : user.role === "admin" && page === "Clientes" && area === "Coordinación" ? btn("Volver a Planificación", "coord", "", "secondary") : user.role === "admin" && page === "Cobros" ? btn('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6M6 17H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M6 14h12v7H6zM17 12h2"/></svg><span>Ver informe</span>', "view-payment-report", "", "secondary payment-report-button") : user.role === "admin" && ["Inicio", "Servicios"].includes(page) ? btn("+ Crear servicio", "create-service") : ""}</div>${body()}</main><footer>Una mano en casa <span>·</span> Gestión cercana, cada día.</footer></div></div>`;
   if (page === "Crear servicios" && editingServiceId && user.role === "admin") {
     const editing = db.services.find((service) => service.id === editingServiceId);
     if (editing) $("#content .form-card").outerHTML = serviceForm(editing);
@@ -6497,39 +6816,35 @@ function empty(message, action = "") {
   return `<div class="empty"><span>☷</span><h3>${message}</h3>${action}</div>`;
 }
 function dashboard() {
-  const services = user.role === "admin" ? db.services : myServices(),
-    tod = services.filter(
-      (s) => serviceOnDate(s, today()) && s.status !== "cancelado",
-    ),
-    pending = db.services.filter((s) => !s.worker_id && active(s)),
-    outstanding = services
-      .filter((s) => !s.paid && s.status !== "cancelado")
-      .reduce((a, s) => a + s.amount, 0);
+  const admin = user.role === "admin";
+  const services = admin ? db.services : myServices();
+  const date = today();
+  const daily = services
+    .filter((service) => serviceOnDate(service, date) && service.status !== "cancelado")
+    .sort((a, b) => a.start.localeCompare(b.start));
   const metric = (label, value, hint, target) =>
     `<button type="button" data-metric="${target}" class="${target === "unassigned" && value > 0 ? "metric-alert" : ""}"><span>${target === "unassigned" && value > 0 ? '<i aria-hidden="true">!</i> ' : ""}${label}</span><b>${value}</b><small>${hint} →</small></button>`;
-  return `<div class="stats">${metric("Servicios de hoy", tod.length, "Ver servicios de hoy", "today")}${user.role === "admin" ? metric("Por asignar", pending.length, "Ver servicios sin persona", "unassigned") : metric("Próximos servicios", services.filter((s) => (s.date >= today() || serviceOnDate(s, today())) && active(s)).length, "Ver próximos servicios", "upcoming")}${user.role === "admin" ? metric("Equipo de atención", db.workers.length, "Ver empleados", "team") : metric("Días no disponibles", db.availability.length, "Abrir mi agenda", "agenda")}${user.role === "admin" ? metric("Pendiente de cobro", euro(outstanding), "Ver cobros pendientes", "payments") : ""}</div><div class="dashboard-grid"><section class="card"><div class="section-heading"><div><h2>La agenda del día</h2></div><button class="text" data-page="${user.role === "admin" ? "Planificación" : "Agenda"}" ${user.role === "admin" ? 'data-go-coord="true"' : ""}>Ver agenda →</button></div>${
-    tod.length
-      ? tod
-          .sort((a, b) => a.start.localeCompare(b.start))
-          .map(serviceRow)
-          .join("")
-      : empty("No hay servicios para hoy.")
-  }</section></div><section class="quick-links">${(user.role === "admin"
-    ? [
-        ["Clientes", "Consultar clientes", "Información siempre a mano"],
-        ["Servicios", "Seguir los servicios", "Todo el trabajo organizado"],
-        ["Cobros", "Revisar los cobros", "Un seguimiento sencillo"],
-      ]
-    : [
-        ["Servicios", "Mis servicios", "Lo que necesitas para cada visita"],
-        ["Agenda", "Mi disponibilidad", "Ayuda al equipo a organizarse"],
-      ]
-  )
-    .map(
-      ([p, t, d]) =>
-        `<button data-page="${p}"><span class="quick-icon">${icons[p]}</span><span><b>${t}</b><small>${d}</small></span><i>↗</i></button>`,
-    )
-    .join("")}</section>`;
+  const todayMetric = metric("Servicios de hoy", daily.length, "Ver servicios de hoy", "today");
+  const agenda = `<div class="dashboard-grid"><section class="card"><div class="section-heading"><div><h2>La agenda del día</h2></div><button class="text" data-page="${admin ? "Planificación" : "Agenda"}" ${admin ? 'data-go-coord="true"' : ""}>Ver agenda →</button></div>${
+    daily.length ? daily.map(serviceRow).join("") : empty("No hay servicios para hoy.")
+  }</section></div>`;
+
+  if (admin) {
+    const pending = services.filter((service) => !service.worker_id && active(service));
+    const outstanding = services
+      .filter((service) => !service.paid && service.status !== "cancelado")
+      .reduce((total, service) => total + service.amount, 0);
+    return `<div class="stats">${todayMetric}${metric("Por asignar", pending.length, "Ver servicios sin persona", "unassigned")}${metric("Equipo de atención", db.workers.length, "Ver empleados", "team")}${metric("Pendiente de cobro", euro(outstanding), "Ver cobros pendientes", "payments")}</div>${agenda}`;
+  }
+
+  const upcoming = services.filter((service) => (service.date >= date || serviceOnDate(service, date)) && active(service));
+  const shortcuts = [
+    ["Servicios", "Mis servicios", "Lo que necesitas para cada visita"],
+    ["Agenda", "Mi disponibilidad", "Ayuda al equipo a organizarse"],
+  ];
+  return `<div class="stats">${todayMetric}${metric("Próximos servicios", upcoming.length, "Ver próximos servicios", "upcoming")}${metric("Días no disponibles", db.availability.length, "Abrir mi agenda", "agenda")}</div>${agenda}<section class="quick-links">${shortcuts.map(([destination, label, description]) =>
+    `<button data-page="${destination}"><span class="quick-icon">${icons[destination]}</span><span><b>${label}</b><small>${description}</small></span><i>↗</i></button>`
+  ).join("")}</section>`;
 }
 function serviceRow(s) {
   const c = client(s),
@@ -6857,7 +7172,7 @@ function serviceForm(s = {}) {
   const tariff = s.id
     ? db.tariffs.find((t) => t.name === s.title)
     : db.tariffs[0];
-  return `<form id="service-form" class="card form-card" data-end-mode="${s.id ? "manual" : "auto"}"><input type="hidden" name="id" value="${esc(s.id || "")}"><div class="service-customer"><div class="form-section-title"><span>01</span><div><h2>Cliente y atención</h2><p>Busca un cliente existente por su nombre o teléfono.</p></div></div><div class="client-picker"><label for="client-search">Cliente</label><input id="client-search" placeholder="Escribe un nombre o teléfono" autocomplete="off" required role="combobox" aria-autocomplete="list" aria-controls="client-results" aria-describedby="client-info" aria-expanded="false" value="${esc(c.name || "")}"><input type="hidden" name="client_id" value="${esc(s.client_id || "")}"><div id="client-results" role="listbox" aria-label="Clientes coincidentes" hidden></div></div><p class="hint" id="client-info">${esc(c.address || "Selecciona un cliente para consultar su dirección.")}</p><div class="form-grid"><label>Tipo de servicio<select name="tariff" id="tariff-select"><option value="" ${!tariff ? "selected" : ""}>Personalizado</option>${db.tariffs.map((t) => `<option value="${t.id}" ${tariff?.id === t.id ? "selected" : ""}>${esc(t.name)} · ${tariffPriceLabel(t)}</option>`).join("")}</select></label><label>Nombre del servicio<input name="title" required value="${esc(s.title || db.tariffs[0]?.name || "Atención en domicilio")}"></label></div><p id="tariff-price-info" class="hint" aria-live="polite"></p></div><div class="service-scheduling"><div class="form-section-title"><span>02</span><div><h2>Fecha y organización</h2><p>Se comprueba la disponibilidad y que no coincidan los horarios.</p></div></div><div class="form-grid three"><label>Fecha<input type="date" name="date" required value="${esc(s.date || (area === "Coordinación" ? coordinationDate : focusDate))}"></label><label>Desde<input type="time" name="start" required value="${esc(s.start || "09:00")}"></label><label>Hasta<input type="time" name="end" required value="${esc(s.end || "")}"></label></div><div class="end-time-help"><p id="end-time-info" class="hint" aria-live="polite"></p><button type="button" class="text" data-action="auto-end">Usar hora de fin automática</button></div><label>Persona asignada<select name="worker_id"><option value="">Pendiente de asignación</option>${db.workers.map((w) => `<option value="${w.id}" ${sel === w.id ? "selected" : ""}>${esc(w.name)} · ${esc(workerCities(w).join(", "))}</option>`).join("")}</select></label><div id="assignment-info" aria-live="polite"></div><section class="availability-guide" aria-label="Explorar disponibilidad"><h3>Buscar otra fecha para esta franja</h3><p class="hint">Los recuentos corresponden al horario Desde–Hasta elegido.</p><div id="availability-dates"></div></section></div><div class="service-billing"><div class="form-grid"><label>Importe total (€)<input name="amount" type="number" min="0" step="0.01" required value="${s.amount ?? (store.mode === "demo" ? 36 : 0)}"></label><label>Estado<select name="status">${statuses.map((t) => `<option ${t === (s.status || "pendiente") ? "selected" : ""}>${t}</option>`).join("")}</select></label></div><label>Método de pago<select name="payment_method"><option value="">Sin indicar</option>${[...new Set([...paymentMethods().filter((m) => m.enabled).map((m) => m.name), ...(s.payment_method ? [s.payment_method] : [])])].map((name) => `<option value="${esc(name)}" ${s.payment_method === name ? "selected" : ""}>${esc(name)}</option>`).join("")}</select></label><label>Indicaciones para la visita<textarea name="notes" rows="3">${esc(s.notes || "")}</textarea></label></div>${serviceActualTimes(s) ? `<p class="service-real-time">${esc(serviceActualTimes(s))}</p>` : ""}<div class="form-actions"><button type="button" class="secondary" data-action="cancel-form">${s.id ? "Volver sin guardar" : "Cancelar"}</button>${cancelServiceButton(s)}<button class="primary">${s.id ? "Guardar cambios" : "Crear servicio"}</button></div><p class="form-error" role="alert"></p></form>`;
+  return `<form id="service-form" class="card form-card" data-end-mode="${s.id ? "manual" : "auto"}"><input type="hidden" name="id" value="${esc(s.id || "")}"><div class="service-customer"><div class="form-section-title"><span>01</span><div><h2>Cliente y atención</h2><p>Busca un cliente existente por su nombre o teléfono.</p></div></div><div class="client-picker"><label for="client-search">Cliente</label><input id="client-search" placeholder="Escribe un nombre o teléfono" autocomplete="off" required role="combobox" aria-autocomplete="list" aria-controls="client-results" aria-describedby="client-info" aria-expanded="false" value="${esc(c.name || "")}"><input type="hidden" name="client_id" value="${esc(s.client_id || "")}"><div id="client-results" role="listbox" aria-label="Clientes coincidentes" hidden></div></div><p class="hint" id="client-info">${esc(c.address || "Selecciona un cliente para consultar su dirección.")}</p><div class="form-grid"><label>Tipo de servicio<select name="tariff" id="tariff-select"><option value="" ${!tariff ? "selected" : ""}>Personalizado</option>${db.tariffs.map((t) => `<option value="${t.id}" ${tariff?.id === t.id ? "selected" : ""}>${esc(t.name)} · ${tariffPriceLabel(t)}</option>`).join("")}</select></label><label>Nombre del servicio<input name="title" required value="${esc(s.title || db.tariffs[0]?.name || "Atención en domicilio")}"></label></div><p id="tariff-price-info" class="hint" aria-live="polite"></p></div><div class="service-scheduling"><div class="form-section-title"><span>02</span><div><h2>Fecha y organización</h2><p>Se comprueba la disponibilidad y que no coincidan los horarios.</p></div></div><div class="form-grid three"><label>Fecha<input type="date" name="date" required value="${esc(s.date || (area === "Coordinación" ? coordinationDate : focusDate))}"></label><label>Desde<input type="time" name="start" required value="${esc(s.start || "09:00")}"></label><label>Hasta<input type="time" name="end" required value="${esc(s.end || "")}"></label></div><div class="end-time-help"><p id="end-time-info" class="hint" aria-live="polite"></p><button type="button" class="text" data-action="auto-end">Usar hora de fin automática</button></div><label>Persona asignada<select name="worker_id"><option value="">Pendiente de asignación</option>${db.workers.map((w) => `<option value="${w.id}" ${sel === w.id ? "selected" : ""}>${esc(w.name)} · ${esc(workerCities(w).join(", "))}</option>`).join("")}</select></label><div id="assignment-info" aria-live="polite"></div><section class="availability-guide" aria-label="Explorar disponibilidad"><h3>Buscar otra fecha para esta franja</h3><button type="button" class="text availability-toggle" data-action="toggle-availability-guide" aria-expanded="false" aria-controls="availability-guide-body">Buscar otra fecha <span aria-hidden="true">⌄</span></button><div id="availability-guide-body"><p class="hint">Los recuentos corresponden al horario Desde–Hasta elegido.</p><div id="availability-dates"></div></div></section></div><div class="service-billing"><div class="form-grid"><label>Importe total (€)<input name="amount" type="number" min="0" step="0.01" required value="${s.amount ?? (store.mode === "demo" ? 36 : 0)}"></label><label>Estado<select name="status">${statuses.map((t) => `<option ${t === (s.status || "pendiente") ? "selected" : ""}>${t}</option>`).join("")}</select></label></div><label>Método de pago<select name="payment_method"><option value="">Sin indicar</option>${[...new Set([...paymentMethods().filter((m) => m.enabled).map((m) => m.name), ...(s.payment_method ? [s.payment_method] : [])])].map((name) => `<option value="${esc(name)}" ${s.payment_method === name ? "selected" : ""}>${esc(name)}</option>`).join("")}</select></label><label>Indicaciones para la visita<textarea name="notes" rows="3">${esc(s.notes || "")}</textarea></label></div>${serviceActualTimes(s) ? `<p class="service-real-time">${esc(serviceActualTimes(s))}</p>` : ""}<div class="form-actions"><button type="button" class="secondary" data-action="cancel-form">${s.id ? "Volver sin guardar" : "Cancelar"}</button>${cancelServiceButton(s)}<button class="primary">${s.id ? "Guardar cambios" : "Crear servicio"}</button></div><p class="form-error" role="alert"></p></form>`;
 }
 function calendar(coord) {
   const target = coord ? workerFilter : mine()?.id;
@@ -6996,7 +7311,7 @@ function calendar(coord) {
   }</section></div></div>`;
 }
 function workersView() {
-  return `<div class="toolbar"><p>${db.workers.length} personas en el equipo</p>${btn("+ Añadir empleado", "new-worker")}</div><div class="employee-grid">${db.workers
+  return `<div class="toolbar employee-toolbar"><p>${db.workers.length} personas en el equipo</p>${btn("+ Añadir empleado", "new-worker")}</div><div class="employee-grid">${db.workers
     .map(
       (w) =>
         `<article class="card employee-card"><div class="employee-heading"><span class="person-avatar green" aria-hidden="true">${esc(w.name?.[0] || "?")}</span><div><h2>${esc(w.name)}</h2><small>${[w.employee_number ? "N.º " + w.employee_number : "", w.town, w.phone].filter(Boolean).map(esc).join(" · ")}</small></div></div><div class="tags">${workerCities(
@@ -7796,7 +8111,10 @@ document.addEventListener("click", (e) => {
     const tab = t.dataset.area;
     area = ["Empleados", "Coordinación"].includes(tab) ? "Coordinación" : "Mi gestión";
     go(tab === "Mi gestión" ? "Inicio" : tab === "Coordinación" ? "Planificación" : tab);
-    document.querySelector('[data-area="' + tab + '"]')?.focus();
+    const target = t.closest(".admin-area-menu")
+      ? $(".admin-area-menu summary")
+      : document.querySelector('[data-area="' + tab + '"]');
+    target?.focus();
     return;
   }
   if (t.dataset.service) {
@@ -7843,6 +8161,10 @@ document.addEventListener("click", (e) => {
   }
   const action = t.dataset.action;
   if (!action) return;
+  if (action === "toggle-availability-guide") {
+    t.setAttribute("aria-expanded", String(t.getAttribute("aria-expanded") !== "true"));
+    return;
+  }
   run(async () => {
     switch (action) {
       case "manage-team-roles":

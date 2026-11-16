@@ -7,7 +7,7 @@
     <link rel="manifest" href="umec-v2.webmanifest?v=503">
     <link rel="icon" type="image/png" sizes="32x32" href="umec-v2-icon-32.png">
     <link rel="apple-touch-icon" sizes="192x192" href="umec-v2-icon-192.png">
-    <title>UMEC Gestión · UMEC V2 v5.0.9</title>
+    <title>UMEC Gestión · UMEC V2 v5.0.10</title>
     <style>:root {
   --accent: #155b69;
   --ink: #203c44;
@@ -6044,7 +6044,7 @@ async function startGoogleSignIn() {
   sessionStorage.setItem(googleFlowKey, JSON.stringify({
     verifier, projectUrl: config.url, returnUrl: googleReturnUrl(),
   }));
-  if (["#requests", "#services"].includes(notificationDestination)) sessionStorage.setItem("umec-push-destination", notificationDestination);
+  if (["#requests", "#services", "#web-bookings"].includes(notificationDestination)) sessionStorage.setItem("umec-push-destination", notificationDestination);
   location.assign(redirect.href);
 }
 async function finishGoogleSignIn(params, fragment, pending) {
@@ -6194,16 +6194,17 @@ async function enablePush() {
 }
 let notificationDestination = location.hash || sessionStorage.getItem("umec-push-destination") || "";
 function openNotificationDestination() {
-  if (store.mode !== "cloud" || !["#requests", "#services"].includes(notificationDestination)) return;
+  if (store.mode !== "cloud" || !["#requests", "#services", "#web-bookings"].includes(notificationDestination)) return;
   const destination = notificationDestination;
   notificationDestination = "";
   sessionStorage.removeItem("umec-push-destination");
   if (location.hash === destination) history.replaceState(history.state, "", location.pathname + location.search);
   if (destination === "#services") go("Servicios");
   if (destination === "#requests" && user.role === "admin") showEmployeeRequests();
+  if (destination === "#web-bookings" && user.role === "admin") void run(showWebBookings);
 }
 navigator.serviceWorker?.addEventListener("message", event => {
-  if (!["#requests", "#services"].includes(event.data?.umecNotification)) return;
+  if (!["#requests", "#services", "#web-bookings"].includes(event.data?.umecNotification)) return;
   notificationDestination = event.data.umecNotification;
   if (user && store?.mode === "cloud") void run(refresh);
 });

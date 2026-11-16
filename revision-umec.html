@@ -8,7 +8,7 @@
     <meta name="theme-color" content="#155b69" />
     <link rel="icon" type="image/png" sizes="32x32" href="umec-v2-icon-32.png">
     <link rel="apple-touch-icon" sizes="192x192" href="umec-v2-icon-192.png">
-    <title>UMEC Gestión · Revisión v2.2.7</title>
+    <title>UMEC Gestión · Revisión v2.2.8</title>
     <style>:root {
   --accent: #155b69;
   --ink: #203c44;
@@ -6317,7 +6317,7 @@ function login(message = "") {
         </div>
         <section class="access-card" aria-labelledby="access-title">
           <h1 id="access-title">Revisión de UMEC V2</h1>
-          <p class="access-intro">Versión 2.2.7 · Datos de ejemplo</p>
+          <p class="access-intro">Versión 2.2.8 · Datos de ejemplo</p>
           <p id="login-feedback" class="login-feedback" role="status">${esc(message)}</p>
             <div class="demo-options">
               ${btn("Demo administrador", "demo-admin", 'type="button"', "secondary full")}
@@ -7037,31 +7037,121 @@ function reportsView() {
       <p class="hint">El período se calcula por fecha del servicio. «Cobrado» refleja su estado de pago actual.</p>
     </section>
     <section class="card"><h2>Informe de cobros</h2><p>Abre el informe del período para descargarlo o imprimirlo.</p>${btn("Ver informe", "view-payment-report", 'type="button"', "secondary")}</section>
-    <section class="card"><h2>Para la gestoría</h2><p>Descarga los servicios del período con importes, estado y método de pago. El CSV se puede abrir en Excel.</p>
+    <section class="card"><h2>Para la gestoría</h2><p>Descarga un Excel con el resumen de importes y el detalle de los servicios del período.</p>
       <p class="hint">Exportación de gestión. No genera facturas ni libros fiscales.</p>
-      ${btn("Descargar CSV", "export-reports-csv", rows.length ? 'type="button"' : 'type="button" disabled', "secondary")}
+      ${btn("Descargar Excel", "export-reports-xlsx", rows.length ? 'type="button"' : 'type="button" disabled', "secondary")}
     </section>
   </div>`;
 }
-function reportsCSV(rows) {
-  const quote = value => {
-    const raw = String(value ?? "");
-    const safe = /^[\t\r\n]|^\s*[=+@-]/.test(raw) ? "'" + raw : raw;
-    return '"' + safe.replaceAll('"','""') + '"';
-  };
-  const header = ["Referencia", "Fecha del servicio", "Cliente", "Servicio", "Importe EUR", "Estado del cobro", "Método de pago"];
-  const records = rows.map(s => [paymentReference(s), s.date, client(s).name || "", s.title,
-    Number(s.amount || 0).toFixed(2).replace(".", ","), s.paid ? "Cobrado" : "Pendiente", s.payment_method || ""]);
-  return "\uFEFF" + [header, ...records].map(row => row.map(quote).join(";")).join("\r\n");
+function workbookZip(files) {
+  const encoder = new TextEncoder();
+  const blocks = [], directory = [];
+  const table = Uint32Array.from({length:256}, (_, value) => {
+    for (let bit = 0; bit < 8; bit++) value = value & 1 ? (value >>> 1) ^ 0xedb88320 : value >>> 1;
+    return value;
+  });
+  let offset = 0, directorySize = 0;
+  for (const [path, content] of Object.entries(files)) {
+    const name = encoder.encode(path), data = encoder.encode(content);
+    let crc = 0xffffffff;
+    for (const byte of data) crc = (crc >>> 8) ^ table[(crc ^ byte) & 255];
+    crc = (crc ^ 0xffffffff) >>> 0;
+
+    const local = new DataView(new ArrayBuffer(30));
+    local.setUint32(0, 0x04034b50, true);
+    local.setUint16(4, 20, true);
+    local.setUint16(12, 33, true);
+    local.setUint32(14, crc, true);
+    local.setUint32(18, data.length, true);
+    local.setUint32(22, data.length, true);
+    local.setUint16(26, name.length, true);
+    blocks.push(local.buffer, name, data);
+
+    const entry = new DataView(new ArrayBuffer(46));
+    entry.setUint32(0, 0x02014b50, true);
+    entry.setUint16(4, 20, true);
+    entry.setUint16(6, 20, true);
+    entry.setUint16(14, 33, true);
+    entry.setUint32(16, crc, true);
+    entry.setUint32(20, data.length, true);
+    entry.setUint32(24, data.length, true);
+    entry.setUint16(28, name.length, true);
+    entry.setUint32(42, offset, true);
+    directory.push(entry.buffer, name);
+    offset += 30 + name.length + data.length;
+    directorySize += 46 + name.length;
+  }
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true);
+  end.setUint16(8, directory.length / 2, true);
+  end.setUint16(10, directory.length / 2, true);
+  end.setUint32(12, directorySize, true);
+  end.setUint32(16, offset, true);
+  return new Blob([...blocks, ...directory, end.buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
 }
-function exportReportsCSV() {
+
+function reportsWorkbook(rows, period) {
+  const xml = value => String(value ?? "").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\ufffe\uffff]/g, "")
+    .replace(/[&<>]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[ch]);
+  const cell = (address, value, style = 0) => {
+    const attributes = ' r="' + address + '" s="' + style + '"';
+    if (typeof value === "number") return "<c" + attributes + "><v>" + value + "</v></c>";
+    return '<c' + attributes + ' t="inlineStr"><is><t xml:space="preserve">' + xml(value) + '</t></is></c>';
+  };
+  const formula = (address, expression, cached) => '<c r="' + address + '" s="2"><f>' + xml(expression) + '</f><v>' + cached + '</v></c>';
+  const line = (n, cells) => '<row r="' + n + '">' + cells.join("") + '</row>';
+  const sheet = (widths, lines, tableRange = "") => {
+    const cols = widths.map((width,i) => '<col min="' + (i+1) + '" max="' + (i+1) + '" width="' + width + '" customWidth="1"/>').join("");
+    const view = tableRange ? '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>' : "";
+    return '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' + view +
+      '<cols>' + cols + '</cols><sheetData>' + lines.join("") + '</sheetData>' +
+      (tableRange ? '<autoFilter ref="' + tableRange + '"/>' : "") + '</worksheet>';
+  };
+  const excelDate = value => Date.parse(value + "T00:00:00Z") / 86400000 + 25569;
+  const header = ["Referencia","Fecha del servicio","Cliente","Servicio","Importe EUR","Estado del cobro","Método de pago"];
+  const columns = "ABCDEFG";
+  let paid = 0, pending = 0;
+  const detail = [line(1, header.map((label,i) => cell(columns[i] + "1", label, 1)))];
+  rows.forEach((s,i) => {
+    const amount = Number(s.amount || 0), cents = Number.isFinite(amount) ? Math.round(amount * 100) : 0;
+    if (s.paid) paid += cents;
+    else pending += cents;
+    const values = [paymentReference(s), excelDate(s.date), client(s).name || "", s.title, cents/100,
+      s.paid ? "Cobrado" : "Pendiente", s.payment_method || "Sin indicar"];
+    detail.push(line(i+2, values.map((value,col) => cell(columns[col] + (i+2), value, col === 1 ? 3 : col === 4 ? 2 : 0))));
+  });
+  const last = Math.max(2, rows.length + 1);
+  const summary = [
+    line(1,[cell("A1","Resumen de servicios",1),cell("B1","EUR",1)]),
+    line(2,[cell("A2","Desde"),cell("B2",excelDate(period.first),3)]),
+    line(3,[cell("A3","Hasta"),cell("B3",excelDate(period.last),3)]),
+    line(4,[cell("A4","Servicios"),cell("B4",rows.length)]),
+    line(6,[cell("A6","Total de servicios"),formula("B6","SUM(Detalle!E2:E"+last+")",(paid+pending)/100)]),
+    line(7,[cell("A7","Cobrado"),formula("B7",'SUMIF(Detalle!F2:F'+last+',"Cobrado",Detalle!E2:E'+last+')',paid/100)]),
+    line(8,[cell("A8","Pendiente de cobro"),formula("B8",'SUMIF(Detalle!F2:F'+last+',"Pendiente",Detalle!E2:E'+last+')',pending/100)]),
+    line(10,[cell("A10","Período por fecha de servicio. Los estados reflejan la situación al exportar.")]),
+  ];
+  return workbookZip({
+    "[Content_Types].xml": '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>',
+    "_rels/.rels": '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>',
+    "xl/workbook.xml": '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView/></bookViews><sheets><sheet name="Resumen" sheetId="1" r:id="rId1"/><sheet name="Detalle" sheetId="2" r:id="rId2"/></sheets></workbook>',
+    "xl/_rels/workbook.xml.rels": '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>',
+    "xl/styles.xml": '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="2"><numFmt numFmtId="164" formatCode="#,##0.00 &quot;€&quot;"/><numFmt numFmtId="165" formatCode="dd/mm/yyyy"/></numFmts><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><color rgb="FFFFFFFF"/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF155B69"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="165" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>',
+    "xl/worksheets/sheet1.xml": sheet([28,21], summary),
+    "xl/worksheets/sheet2.xml": sheet([21,21,36,42,18,23,23], detail, "A1:G"+last),
+  });
+}
+
+function exportReportsWorkbook() {
   const rows = reportPeriodServices();
   if (user.role !== "admin" || !rows.length) return;
-  const { first, last } = reportsRange(reportsDate, reportsPeriod);
-  const url = URL.createObjectURL(new Blob([reportsCSV(rows)], { type: "text/csv;charset=utf-8" }));
+  const period = reportsRange(reportsDate, reportsPeriod);
+  const url = URL.createObjectURL(reportsWorkbook(rows, period));
   const link = document.createElement("a");
   link.href = url;
-  link.download = "UMEC-gestoria-" + first + "--" + last + ".csv";
+  link.download = "UMEC-gestoria-" + period.first + "--" + period.last + ".xlsx";
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
@@ -7909,8 +7999,8 @@ document.addEventListener("click", (e) => {
         ($("#payment-results [data-action='" + action + "']:not(:disabled)") ||
           $("#payment-results nav button:not(:disabled)"))?.focus();
         break;
-      case "export-reports-csv":
-        exportReportsCSV();
+      case "export-reports-xlsx":
+        exportReportsWorkbook();
         break;
       case "view-payment-report":
         if (user.role === "admin") showPaymentReport();

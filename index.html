@@ -7,7 +7,7 @@
     <link rel="manifest" href="umec-v2.webmanifest?v=503">
     <link rel="icon" type="image/png" sizes="32x32" href="umec-v2-icon-32.png">
     <link rel="apple-touch-icon" sizes="192x192" href="umec-v2-icon-192.png">
-    <title>UMEC Gestión · UMEC V2 v2.2.20</title>
+    <title>UMEC Gestión · UMEC V2 v2.2.22</title>
     <style>:root {
   --accent: #155b69;
   --ink: #203c44;
@@ -1262,7 +1262,7 @@ dialog::backdrop {
     display: none;
   }
 }
-@media (max-width: 800px) {
+@media screen and (max-width: 800px) and (orientation: portrait), screen and (max-width: 800px) and (min-height: 501px), screen and (max-width: 800px) and (max-width: 499px), print and (max-width: 800px) {
   .sidebar {
     position: static;
     width: 100%;
@@ -1701,7 +1701,7 @@ select:focus-visible {
   border: 2px solid var(--accent);
   background: #edf5f5;
 }
-@media (max-width: 700px) {
+@media screen and (max-width: 700px) and (orientation: portrait), screen and (max-width: 700px) and (min-height: 501px), screen and (max-width: 700px) and (max-width: 499px), print and (max-width: 700px) {
   .client-row {
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 10px;
@@ -1759,7 +1759,7 @@ select:focus-visible {
   flex-wrap: wrap;
 }
 
-@media (max-width: 700px) {
+@media screen and (max-width: 700px) and (orientation: portrait), screen and (max-width: 700px) and (min-height: 501px), screen and (max-width: 700px) and (max-width: 499px), print and (max-width: 700px) {
   .marked-label {
     font-size: 0;
     padding: 2px 4px;
@@ -2035,7 +2035,7 @@ textarea::placeholder {
     backdrop-filter: blur(8px);
   }
 }
-@media (max-width: 700px) {
+@media screen and (max-width: 700px) and (orientation: portrait), screen and (max-width: 700px) and (min-height: 501px), screen and (max-width: 700px) and (max-width: 499px), print and (max-width: 700px) {
   .available-person,
   .unavailable-person {
     flex-direction: column;
@@ -2229,7 +2229,7 @@ textarea::placeholder {
     grid-template-columns: minmax(0, 1fr);
   }
 }
-@media (max-width: 700px) {
+@media screen and (max-width: 700px) and (orientation: portrait), screen and (max-width: 700px) and (min-height: 501px), screen and (max-width: 700px) and (max-width: 499px), print and (max-width: 700px) {
   .calendar-card {
     padding: 10px 6px;
   }
@@ -2297,7 +2297,7 @@ textarea::placeholder {
 .team-availability b {
   font-size: 13px;
 }
-@media (max-width: 700px) {
+@media screen and (max-width: 700px) and (orientation: portrait), screen and (max-width: 700px) and (min-height: 501px), screen and (max-width: 700px) and (max-width: 499px), print and (max-width: 700px) {
   .count-short {
     font-size: 13px;
   }
@@ -2723,7 +2723,7 @@ textarea {
 .home-heading > .primary {
   margin-top: 0;
 }
-@media (min-width: 801px) {
+@media (min-width: 801px), screen and (orientation: landscape) and (min-width: 500px) and (max-width: 1200px) and (max-height: 600px) {
   .menu-toggle {
     display: inline-flex;
     align-items: center;
@@ -2772,7 +2772,7 @@ textarea {
   }
 }
 
-@media (min-width: 801px) {
+@media (min-width: 801px), screen and (orientation: landscape) and (min-width: 500px) and (max-width: 1200px) and (max-height: 600px) {
   .sidebar > .menu-toggle {
     align-self: flex-end;
     flex-shrink: 0;
@@ -2857,7 +2857,7 @@ textarea {
   height: 44px;
   padding: 8px;
 }
-@media (max-width: 800px) {
+@media screen and (max-width: 800px) and (orientation: portrait), screen and (max-width: 800px) and (min-height: 501px), screen and (max-width: 800px) and (max-width: 499px), print and (max-width: 800px) {
   .topbar {
     height: 56px;
     min-height: 56px;
@@ -2900,7 +2900,7 @@ textarea {
   display: grid;
   place-items: center;
 }
-@media (max-width: 800px) {
+@media screen and (max-width: 800px) and (orientation: portrait), screen and (max-width: 800px) and (min-height: 501px), screen and (max-width: 800px) and (max-width: 499px), print and (max-width: 800px) {
   .nav-item .app-icon {
     width: 18px;
     height: 18px;
@@ -3069,7 +3069,7 @@ textarea {
     justify-self: end;
   }
 }
-@media (max-width: 700px) {
+@media screen and (max-width: 700px) and (orientation: portrait), screen and (max-width: 700px) and (min-height: 501px), screen and (max-width: 700px) and (max-width: 499px), print and (max-width: 700px) {
   .service-day-group,
   .unassigned-services {
     padding: 14px 10px;
@@ -3317,7 +3317,7 @@ textarea {
     font-size: 12px;
   }
 }
-@media (max-width: 700px) {
+@media screen and (max-width: 700px) and (orientation: portrait), screen and (max-width: 700px) and (min-height: 501px), screen and (max-width: 700px) and (max-width: 499px), print and (max-width: 700px) {
   .services-week-pending {
     padding: 12px;
   }
@@ -3352,7 +3352,7 @@ textarea {
 .pending-list-scroll-hint.always {
   display: block;
 }
-@media (max-width: 700px) {
+@media screen and (max-width: 700px) and (orientation: portrait), screen and (max-width: 700px) and (min-height: 501px), screen and (max-width: 700px) and (max-width: 499px), print and (max-width: 700px) {
   .pending-list-scroll-hint {
     display: block;
   }
@@ -3493,7 +3493,7 @@ textarea {
 .services-month-short {
   display: none;
 }
-@media (max-width: 700px) {
+@media screen and (max-width: 700px) and (orientation: portrait), screen and (max-width: 700px) and (min-height: 501px), screen and (max-width: 700px) and (max-width: 499px), print and (max-width: 700px) {
   .services-week-toolbar {
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 10px;
@@ -3641,7 +3641,7 @@ textarea {
 .planning-day-mode .planning-period-day > .cal-day {
   min-height: 70px;
 }
-@media (min-width: 801px) {
+@media (min-width: 801px), screen and (orientation: landscape) and (min-width: 500px) and (max-width: 1200px) and (max-height: 600px) {
   #content.planning-page {
     padding: 14px 20px 12px;
     max-width: 1800px;
@@ -3816,7 +3816,7 @@ textarea {
     min-width: 1100px;
   }
 }
-@media (max-width: 800px) {
+@media screen and (max-width: 800px) and (orientation: portrait), screen and (max-width: 800px) and (min-height: 501px), screen and (max-width: 800px) and (max-width: 499px), print and (max-width: 800px) {
   .planning-page .page-heading {
     flex-wrap: wrap;
   }
@@ -3855,7 +3855,7 @@ textarea {
   }
 }
 
-@media (min-width: 801px) {
+@media (min-width: 801px), screen and (orientation: landscape) and (min-width: 500px) and (max-width: 1200px) and (max-height: 600px) {
   .planning-calendar .daily {
     max-height: calc(100dvh - 250px);
   }
@@ -3864,7 +3864,7 @@ textarea {
   }
 }
 
-@media (min-width: 801px) {
+@media (min-width: 801px), screen and (orientation: landscape) and (min-width: 500px) and (max-width: 1200px) and (max-height: 600px) {
   .planning-month-mode .cal-day {
     padding: 2px 4px;
   }
@@ -4160,7 +4160,7 @@ textarea {
 .client-contact-icon { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid var(--line); border-radius: 9px; color: var(--ink); background: var(--surface-2); }
 .client-contact-icon svg { width: 20px; height: 20px; fill: currentColor; }
 .client-contact-icon[aria-label="WhatsApp"] { color: #087b51; background: #e5f6ee; }
-@media (max-width: 520px) {
+@media screen and (max-width: 520px) and (orientation: portrait), screen and (max-width: 520px) and (min-height: 501px), screen and (max-width: 520px) and (max-width: 499px), print and (max-width: 520px) {
   .team-area .topbar-navigation { gap: 4px; }
   .team-logo { width: 40px; height: 32px; }
   .team-area .area-tabs button { padding-inline: 6px; font-size: 11px; }
@@ -4184,7 +4184,7 @@ textarea {
 .planning-hour-picker summary { cursor:pointer; font-weight:650; padding:7px 0; }
 .client-address { padding:8px 10px 0; margin:0 0 12px; border:1px solid var(--line); border-radius:8px; }
 .client-address-grid { display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1fr); gap:10px; }
-@media (max-width:600px) {
+@media screen and (max-width: 600px) and (orientation: portrait), screen and (max-width: 600px) and (min-height: 501px), screen and (max-width: 600px) and (max-width: 499px), print and (max-width: 600px) {
   .planning-visit { grid-template-columns:minmax(0,1fr) auto; gap:3px 8px; }
   .planning-visit-time { grid-column:1; }
   .planning-visit > span:nth-child(2) { grid-column:1 / -1; grid-row:2; }
@@ -4243,7 +4243,7 @@ textarea {
   .team-area #service-form > .form-actions { grid-area: 3 / 1 / 4 / -1; }
   .team-area #service-form > .form-error { grid-area: 4 / 1 / 5 / -1; }
 }
-@media (max-width: 600px) {
+@media screen and (max-width: 600px) and (orientation: portrait), screen and (max-width: 600px) and (min-height: 501px), screen and (max-width: 600px) and (max-width: 499px), print and (max-width: 600px) {
   .topbar .account-name { display: none; }
 }
 #assignment-info .available-person {
@@ -4329,7 +4329,7 @@ dialog form label :is(input, select, textarea) { font-weight: 400; }
 .planning-date-strip .focused .strip-day { font-size: 22px; }
 .planning-date-strip .focused .day-number { display: block; }
 .planning-date-strip .cal-day:not(.focused) > :not(.day-number) { display: none; }
-@media (max-width: 560px) {
+@media screen and (max-width: 560px) and (orientation: portrait), screen and (max-width: 560px) and (min-height: 501px), screen and (max-width: 560px) and (max-width: 499px), print and (max-width: 560px) {
   .planning-date-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(0, 1.5fr) repeat(2, minmax(0, 1fr));
     gap: 4px;
@@ -4346,7 +4346,7 @@ dialog form label :is(input, select, textarea) { font-weight: 400; }
 .personal-calendar .calendar-grid .cal-day { min-height:52px; padding:4px; }
 .personal-calendar .calendar-grid .day-number { font-size:13px; }
 .personal-calendar .calendar-grid .calendar-count { font-size:9px; margin-top:2px; padding:1px 3px; }
-@media (max-width:520px) {
+@media screen and (max-width: 520px) and (orientation: portrait), screen and (max-width: 520px) and (min-height: 501px), screen and (max-width: 520px) and (max-width: 499px), print and (max-width: 520px) {
   .personal-calendar .calendar-grid .cal-day { min-height:44px; padding:2px; }
   .personal-calendar .calendar-grid { gap:3px; }
 }
@@ -4458,7 +4458,7 @@ dialog form label :is(input, select, textarea) { font-weight: 400; }
 .login-v4 .demo-entry { margin-top: 17px; padding-top: 15px; border-color: #d8e5df; }
 .login-v4 .demo-entry summary { background: #fff7e5; border-color: #d6a34e; }
 .login-v4 .demo-entry p { color: #45635f; margin: 10px 0; }
-@media (max-width: 720px) {
+@media screen and (max-width: 720px) and (orientation: portrait), screen and (max-width: 720px) and (min-height: 501px), screen and (max-width: 720px) and (max-width: 499px), print and (max-width: 720px) {
   .login-v4 .access-layout { width: min(100%, 455px); grid-template-columns: minmax(0, 1fr); }
   .login-v4 .access-brand { padding: 12px 20px; align-items: center; }
   .login-v4 .login-logo { width: 144px; height: 62px; object-position: center; }
@@ -4512,7 +4512,7 @@ dialog form label :is(input, select, textarea) { font-weight: 400; }
 .login-v4 .access-google, .login-v4 #login-form input, .login-v4 .demo-options button { background: #fffdf7; }
 .login-v4 .demo-entry summary { background: #ffe7a5; color: #553600; }
 .login-v4 .demo-entry summary:hover { background: #ffdc82; }
-@media (max-width: 720px) {
+@media screen and (max-width: 720px) and (orientation: portrait), screen and (max-width: 720px) and (min-height: 501px), screen and (max-width: 720px) and (max-width: 499px), print and (max-width: 720px) {
   .login-v4 .access-brand { padding: 14px 20px; }
   .login-v4 .access-brand::before { width: 78%; height: 65%; bottom: -38%; }
   .login-v4 .access-brand::after { width: 24%; height: 90%; top: -80%; left: -4%; }
@@ -4574,7 +4574,7 @@ dialog form label :is(input, select, textarea) { font-weight: 400; }
   border-radius: 0 0 7px 7px;
 }
 .topbar .mobile-header-logo { display: none; }
-@media (max-width: 800px) {
+@media screen and (max-width: 800px) and (orientation: portrait), screen and (max-width: 800px) and (min-height: 501px), screen and (max-width: 800px) and (max-width: 499px), print and (max-width: 800px) {
   .workspace .topbar {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
@@ -4632,7 +4632,7 @@ dialog form label :is(input, select, textarea) { font-weight: 400; }
 }
 </style>
 <style>
-@media (max-width: 800px) {
+@media screen and (max-width: 800px) and (orientation: portrait), screen and (max-width: 800px) and (min-height: 501px), screen and (max-width: 800px) and (max-width: 499px), print and (max-width: 800px) {
   .shell > .sidebar {
     position: fixed;
     inset: auto 0 0;
@@ -4810,7 +4810,7 @@ button.cal-day[data-date].has-services .calendar-count.assigned-count {
     color: transparent;
   }
 }
-@media (max-width: 800px) {
+@media screen and (max-width: 800px) and (orientation: portrait), screen and (max-width: 800px) and (min-height: 501px), screen and (max-width: 800px) and (max-width: 499px), print and (max-width: 800px) {
   .shell > .sidebar .nav-item:has(.my-agenda-word) { gap: 2px; }
   .shell > .sidebar .nav-label:has(.my-agenda-word) { display: grid; }
   :root[data-skin="petrol"] .sidebar .nav-item:not(.current) { --agenda-mi-red: #ec9b91; --agenda-mi-green: #73dbc0; }
@@ -4834,12 +4834,12 @@ button.secondary.delete-client:hover { background:#fff3f4; }
 .reports-layout { display:grid; gap:14px; grid-template-columns:repeat(2,minmax(0,1fr)); }
 .reports-layout > :first-child { grid-column:1/-1; }
 .reports-layout h2 { margin-top:0; }
-@media(max-width:620px) {
+@media screen and (max-width: 620px) and (orientation: portrait), screen and (max-width: 620px) and (min-height: 501px), screen and (max-width: 620px) and (max-width: 499px), print and (max-width: 620px) {
   .reports-layout { grid-template-columns:1fr; }
 }
 </style>
 <style>
-@media (max-width: 620px) {
+@media screen and (max-width: 620px) and (orientation: portrait), screen and (max-width: 620px) and (min-height: 501px), screen and (max-width: 620px) and (max-width: 499px), print and (max-width: 620px) {
   .workspace .topbar .area-tabs:has(> button:nth-child(5):last-child) {
     grid-template-columns: repeat(6, minmax(0, 1fr));
     grid-auto-flow: row;
@@ -4857,7 +4857,7 @@ button.secondary.delete-client:hover { background:#fff3f4; }
 </style>
 <style>
 .admin-area-menu { display: none; }
-@media (max-width: 800px) {
+@media screen and (max-width: 800px) and (orientation: portrait), screen and (max-width: 800px) and (min-height: 501px), screen and (max-width: 800px) and (max-width: 499px), print and (max-width: 800px) {
   .admin-shell .workspace .topbar { grid-template-rows: auto; }
   .admin-shell .workspace .topbar-navigation {
     display: flex;
@@ -4943,7 +4943,7 @@ button.secondary.delete-client:hover { background:#fff3f4; }
 </style>
 <style>
 /* Compact spacing for the administrator on narrow screens. */
-@media screen and (max-width: 800px) {
+@media screen and (max-width: 800px) and (orientation: portrait), screen and (max-width: 800px) and (min-height: 501px), screen and (max-width: 800px) and (max-width: 499px), print and (max-width: 800px) {
   .admin-shell .workspace .topbar { padding: 4px 10px; }
   .admin-shell .mode-banner { padding: 4px 10px; gap: 3px 8px; flex-wrap: wrap; }
   .admin-shell > .workspace > #content { padding: 10px 10px 6px; }
@@ -5005,7 +5005,7 @@ button.secondary.delete-client:hover { background:#fff3f4; }
 }
 </style>
 <style>
-@media screen and (max-width: 800px) {
+@media screen and (max-width: 800px) and (orientation: portrait), screen and (max-width: 800px) and (min-height: 501px), screen and (max-width: 800px) and (max-width: 499px), print and (max-width: 800px) {
   .admin-shell #content { font-size: 13px; }
   .admin-shell #content .page-heading h1 { font-size: 20px; }
   .admin-shell #content .card h2 { font-size: 15px; }
@@ -5056,7 +5056,7 @@ button.secondary.delete-client:hover { background:#fff3f4; }
 </style>
 <style>
 .availability-toggle { display: none; }
-@media screen and (max-width: 800px) {
+@media screen and (max-width: 800px) and (orientation: portrait), screen and (max-width: 800px) and (min-height: 501px), screen and (max-width: 800px) and (max-width: 499px), print and (max-width: 800px) {
   .admin-shell .workspace .topbar { padding: 3px 8px; gap: 6px; }
   .admin-shell .workspace .topbar:has(.admin-area-menu[open]) {
     position: relative;
@@ -5147,6 +5147,93 @@ button.secondary.delete-client:hover { background:#fff3f4; }
 .area-tabs button { justify-content: center; }
 .area-tab-icon { display: inline-flex; flex: none; }
 .area-tab-icon svg { width: 13px; height: 13px; }
+</style>
+<style>
+@media screen and (orientation: landscape) and (min-width: 500px) and (max-width: 1200px) and (max-height: 600px) {
+  .shell { --landscape-sidebar-width: clamp(110px, 19vw, 150px); }
+  .shell > .sidebar {
+    width: var(--landscape-sidebar-width);
+    padding: 6px 5px;
+  }
+  .shell > .workspace {
+    margin-left: var(--landscape-sidebar-width);
+    width: calc(100% - var(--landscape-sidebar-width));
+    min-width: 0;
+  }
+  .shell.team-area > .workspace { margin-left: 0; width: 100%; }
+  .shell.menu-collapsed > .sidebar { width: 51px; padding: 6px 4px; }
+  .shell.menu-collapsed:has(> .sidebar) > .workspace {
+    margin-left: 51px;
+    width: calc(100% - 51px);
+  }
+  .shell > .sidebar .brand img { width: 100%; height: 32px; padding: 0; object-fit: contain; }
+  .shell > .sidebar .brand > span { font-size: 8px; }
+  .shell > .sidebar .nav-caption { margin-block: 8px 3px; }
+  .shell > .sidebar nav { margin-block: 4px 0; }
+  .shell > .sidebar .nav-item {
+    width: 100%;
+    min-height: 34px;
+    padding: 4px 5px;
+    margin-bottom: 2px;
+    gap: 5px;
+    font-size: 11px;
+  }
+  .shell > .sidebar .nav-item > span:first-child svg { width: 16px; height: 16px; }
+  .shell > .sidebar .menu-toggle { margin-top: 5px; width: 34px; min-width: 34px; height: 34px; padding: 6px; }
+  .workspace .topbar { height: auto; min-height: 42px; padding: 3px 6px; gap: 5px; }
+  .workspace .topbar-navigation { min-width: 0; flex: 1; gap: 5px; }
+  .workspace .topbar .team-logo { width: 44px; height: 27px; }
+  .workspace .topbar .area-tabs { flex-wrap: wrap; padding: 2px; gap: 2px; }
+  .workspace .topbar .area-tabs button { min-height: 32px; padding: 3px 5px; font-size: 11px; gap: 4px; }
+  .workspace .topbar .area-tab-icon svg { width: 12px; height: 12px; }
+  .workspace .topbar .account-name { display: none; }
+  .workspace .topbar .account-menu summary { min-height: 34px; }
+  .workspace .mode-banner { padding: 3px 8px; flex-wrap: wrap; gap: 4px; }
+  .workspace #content, .workspace #content.planning-page { padding: 8px; }
+  .workspace .page-heading { margin-bottom: 8px; gap: 6px; }
+  .workspace .page-heading .eyebrow { margin-bottom: 3px; }
+  .workspace .page-heading h1 { font-size: 21px; }
+  .workspace .page-heading p { margin: 3px 0 0; }
+  .workspace .card { padding: 8px; }
+  .workspace .section-heading { margin-bottom: 5px; }
+  .workspace .stats { gap: 5px; margin-bottom: 8px; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); }
+  .workspace .stats > :is(article, button) { padding: 6px; }
+  .workspace .stats > :is(article, button) > b { margin: 2px 0; font-size: 19px; }
+  .workspace :is(.personal-calendar, .planning-month-mode) .calendar-layout {
+    grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+    gap: 6px;
+  }
+  .workspace :is(.personal-calendar, .planning-month-mode) .cal-day { min-height: 35px; padding: 2px; }
+  .workspace .reports-layout { gap: 6px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .workspace .payment-toolbar { gap: 5px; }
+  .workspace .form-card .form-grid { gap: 6px; }
+  .workspace .form-card label { margin-bottom: 6px; }
+}
+</style>
+<style>
+@media screen and (orientation: landscape) and (min-width: 500px) and (max-width: 1200px) and (max-height: 600px) {
+  .admin-shell #content.planning-page { padding: 4px 6px; }
+  .admin-shell .planning-page .page-heading { margin-bottom: 4px; align-items: center; flex-wrap: nowrap; }
+  .admin-shell .planning-page .page-heading .eyebrow,
+  .admin-shell .planning-page .page-heading p { display: none; }
+  .admin-shell .planning-page .page-heading h1 { font-size: 18px; }
+  .admin-shell .planning-header-actions { width: auto; gap: 4px; }
+  .admin-shell .planning-header-actions button { min-height: 30px; padding: 3px 6px; font-size: 10px; }
+  .admin-shell .planning-toolbar { display: grid; grid-template-columns: minmax(0,1fr) auto minmax(100px,150px); gap: 5px; margin-bottom: 4px; }
+  .admin-shell .planning-toolbar > * { grid-area: auto; width: auto; margin: 0; }
+  .admin-shell .planning-toolbar .month-picker { gap: 4px; }
+  .admin-shell .planning-toolbar .month-picker h2 { font-size: 13px; min-width: 0; }
+  .admin-shell .planning-toolbar select { padding: 3px; margin-top: 0; height: 30px; font-size: 11px; }
+  .admin-shell .planning-calendar .calendar-card { padding: 4px; }
+  .admin-shell .planning-calendar .planning-week-grid { min-width: 0; grid-template-columns: repeat(7,minmax(0,1fr)); gap: 3px; }
+  .admin-shell .planning-week-grid .planning-period-day > .cal-day { height: 54px; padding: 2px; }
+  .admin-shell .planning-week-grid .day-number { font-size: 12px; }
+  .admin-shell .planning-week-grid .vertical-timeline { --hour-height: 17px; --time-gutter: 26px; }
+  .admin-shell .planning-calendar .calendar-legend { margin-block: 3px; gap: 3px 7px; font-size: 9px; }
+  .admin-shell .planning-month-mode .cal-day { min-height: 30px; padding: 2px; }
+  .admin-shell .planning-week-controls { margin-bottom: 3px; gap: 4px; }
+  .admin-shell .planning-week-controls button { min-height: 28px; padding: 3px 5px; font-size: 10px; }
+}
 </style>
 </head>
   <body>
@@ -8374,7 +8461,7 @@ document.addEventListener("click", (e) => {
         refreshAppLogo("Logo original restaurado.");
         break;
       case "toggle-menu":
-        if (!window.matchMedia("(min-width: 801px)").matches) break;
+        if (!window.matchMedia("(min-width: 801px), (orientation: landscape) and (min-width: 500px) and (max-width: 1200px) and (max-height: 600px)").matches) break;
         menuCollapsed = !menuCollapsed;
         localStorage.setItem("umec-menu-collapsed", String(menuCollapsed));
         document

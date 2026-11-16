@@ -8,7 +8,7 @@
     <meta name="theme-color" content="#155b69" />
     <link rel="icon" type="image/png" sizes="32x32" href="umec-v2-icon-32.png">
     <link rel="apple-touch-icon" sizes="192x192" href="umec-v2-icon-192.png">
-    <title>UMEC Gestión · Revisión v2.2.15</title>
+    <title>UMEC Gestión · Revisión v2.2.16</title>
     <style>:root {
   --accent: #155b69;
   --ink: #203c44;
@@ -5059,6 +5059,10 @@ button.secondary.delete-client:hover { background:#fff3f4; }
 .availability-toggle { display: none; }
 @media screen and (max-width: 800px) {
   .admin-shell .workspace .topbar { padding: 3px 8px; gap: 6px; }
+  .admin-shell .workspace .topbar:has(.admin-area-menu[open]) {
+    position: relative;
+    z-index: 24;
+  }
   .admin-shell .workspace .topbar-navigation { gap: 5px; }
   .admin-shell .workspace .topbar .team-logo { height: 30px; }
   .admin-shell .workspace .topbar :is(.admin-area-menu, .account-menu) summary {
@@ -6608,7 +6612,7 @@ function login(message = "") {
         </div>
         <section class="access-card" aria-labelledby="access-title">
           <h1 id="access-title">Revisión de UMEC V2</h1>
-          <p class="access-intro">Versión 2.2.15 · Datos de ejemplo</p>
+          <p class="access-intro">Versión 2.2.16 · Datos de ejemplo</p>
           <p id="login-feedback" class="login-feedback" role="status">${esc(message)}</p>
             <div class="demo-options">
               ${btn("Demo administrador", "demo-admin", 'type="button"', "secondary full")}
